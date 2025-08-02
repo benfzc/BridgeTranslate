@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Bilingual Bridge",
+  "version": "1.0.0",
+  "description": "雙語橋樑 - 智能網頁翻譯擴展，提供中英對照翻譯體驗",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  
+  "background": {
+    "service_worker": "js/background-hybrid.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/content.js"],
+      "css": ["css/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bilingual Bridge"
+  },
+  
+  "options_page": "settings.html",
+  
+
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "css/translation.css",
+        "js/models.js",
+        "js/content-analyzer.js",
+        "js/translation-renderer.js",
+        "js/translation-button.js",
+        "js/button-manager.js",
+        "js/api-services.js",
+        "js/api-manager.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

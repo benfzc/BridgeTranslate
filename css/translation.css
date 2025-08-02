@@ -1,0 +1,373 @@
+/* 翻譯內容專用樣式 - 透過 web_accessible_resources 載入 */
+
+.web-translation-overlay {
+    position: relative !important;
+}
+
+.web-translation-content {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border-left: 4px solid #007bff !important;
+    padding: 12px 16px !important;
+    margin: 8px 0 !important;
+    border-radius: 0 8px 8px 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: #495057 !important;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+}
+
+.web-translation-content:hover {
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2) !important;
+    transform: translateX(2px) !important;
+}
+
+.web-translation-content::before {
+    content: '🌐' !important;
+    position: absolute !important;
+    top: 8px !important;
+    right: 12px !important;
+    font-size: 12px !important;
+    opacity: 0.6 !important;
+}
+
+/* 不同優先級的翻譯樣式 */
+.web-translation-content.priority-high {
+    border-left-color: #28a745 !important;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+}
+
+.web-translation-content.priority-medium {
+    border-left-color: #ffc107 !important;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+}
+
+.web-translation-content.priority-low {
+    border-left-color: #6c757d !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+/* 載入狀態 */
+.web-translation-loading {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: #6c757d !important;
+    font-style: italic !important;
+    padding: 8px 12px !important;
+    background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 50%, #e9ecef 100%) !important;
+    background-size: 200% 100% !important;
+    animation: shimmer 2s infinite !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    margin: 4px 0 !important;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.web-translation-loading::after {
+    content: '' !important;
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid #dee2e6 !important;
+    border-top: 2px solid #007bff !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+}
+
+/* 錯誤狀態 */
+.web-translation-error {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+    border-left-color: #dc3545 !important;
+    color: #721c24 !important;
+    position: relative !important;
+}
+
+.web-translation-error::before {
+    content: '⚠️' !important;
+}
+
+.web-translation-retry {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    margin-left: 8px !important;
+    transition: all 0.2s !important;
+}
+
+.web-translation-retry:hover {
+    background-color: #c82333 !important;
+    transform: scale(1.05) !important;
+}
+
+/* 隱藏狀態 */
+.web-translation-hidden {
+    display: none !important;
+}
+
+/* 淡入動畫 */
+.web-translation-fade-in {
+    animation: fadeIn 0.5s ease-in-out !important;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0 !important;
+        transform: translateY(-10px) !important;
+    }
+    to { 
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+    }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .web-translation-content {
+        font-size: 13px !important;
+        padding: 10px 12px !important;
+        margin: 6px 0 !important;
+    }
+}
+
+/* 深色模式支援 */
+@media (prefers-color-scheme: dark) {
+    .web-translation-content {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+        color: #e2e8f0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .web-translation-loading {
+        background: linear-gradient(90deg, #4a5568 0%, #2d3748 50%, #4a5568 100%) !important;
+        color: #a0aec0 !important;
+    }
+}
+/
+* ===== 翻譯按鈕樣式 ===== */
+
+/* 浮動翻譯按鈕容器 */
+.translation-button-container {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 10000 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* 主翻譯按鈕 */
+.translation-button {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* 按鈕狀態樣式 */
+.translation-button.idle {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+.translation-button.idle:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.translation-button.translating {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: white !important;
+    animation: pulse 2s infinite !important;
+}
+
+.translation-button.completed {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+    color: white !important;
+}
+
+.translation-button.completed:hover {
+    transform: scale(1.05) !important;
+}
+
+.translation-button.error {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%) !important;
+    color: #d32f2f !important;
+}
+
+.translation-button.error:hover {
+    transform: scale(1.05) !important;
+}
+
+/* 按鈕圖示 */
+.translation-button-icon {
+    transition: transform 0.3s ease !important;
+}
+
+.translation-button.translating .translation-button-icon {
+    animation: rotate 2s linear infinite !important;
+}
+
+/* 進度環 */
+.translation-progress-ring {
+    position: absolute !important;
+    top: -2px !important;
+    left: -2px !important;
+    width: 60px !important;
+    height: 60px !important;
+    transform: rotate(-90deg) !important;
+}
+
+.translation-progress-circle {
+    fill: none !important;
+    stroke: rgba(255, 255, 255, 0.3) !important;
+    stroke-width: 2 !important;
+}
+
+.translation-progress-circle.progress {
+    stroke: white !important;
+    stroke-width: 3 !important;
+    stroke-linecap: round !important;
+    transition: stroke-dashoffset 0.3s ease !important;
+}
+
+/* 狀態指示器 */
+.translation-status-indicator {
+    position: absolute !important;
+    bottom: -8px !important;
+    right: -8px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    border: 2px solid white !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+}
+
+.translation-status-indicator.idle {
+    background: #9e9e9e !important;
+    color: white !important;
+}
+
+.translation-status-indicator.translating {
+    background: #ff9800 !important;
+    color: white !important;
+    animation: blink 1s infinite !important;
+}
+
+.translation-status-indicator.completed {
+    background: #4caf50 !important;
+    color: white !important;
+}
+
+.translation-status-indicator.error {
+    background: #f44336 !important;
+    color: white !important;
+}
+
+/* 工具提示 */
+.translation-tooltip {
+    position: absolute !important;
+    bottom: 70px !important;
+    right: 0 !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: all 0.3s ease !important;
+    pointer-events: none !important;
+}
+
+.translation-tooltip::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 100% !important;
+    right: 20px !important;
+    border: 6px solid transparent !important;
+    border-top-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.translation-button-container:hover .translation-tooltip {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(-5px) !important;
+}
+
+/* 按鈕動畫效果 */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1) !important;
+    }
+    50% {
+        transform: scale(1.05) !important;
+    }
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg) !important;
+    }
+    to {
+        transform: rotate(360deg) !important;
+    }
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1 !important;
+    }
+    51%, 100% {
+        opacity: 0.5 !important;
+    }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .translation-button-container {
+        top: 15px !important;
+        right: 15px !important;
+    }
+    
+    .translation-button {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
+    }
+    
+    .translation-progress-ring {
+        width: 52px !important;
+        height: 52px !important;
+    }
+    
+    .translation-status-indicator {
+        width: 16px !important;
+        height: 16px !important;
+        font-size: 10px !important;
+        bottom: -6px !important;
+        right: -6px !important;
+    }
+}

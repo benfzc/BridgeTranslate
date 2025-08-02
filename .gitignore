@@ -1,0 +1,60 @@
+# Chrome Extension Development
+*.crx
+*.pem
+key.pem
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# API Keys (security)
+config/api-keys.js
+secrets.json
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Debug files
+debug-*.html
+test-*.html
+
+# Kiro IDE (keep specs but ignore some temp files)
+.kiro/cache/
+.kiro/temp/

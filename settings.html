@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Translation Extension - 設定</title>
+    <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+    <div class="settings-container">
+        <header class="settings-header">
+            <h1>Web Translation Extension 設定</h1>
+        </header>
+        
+        <main class="settings-main">
+            <section class="api-config-section">
+                <h2>AI 翻譯服務設定</h2>
+                
+                <div class="provider-info" id="providerInfo">
+                    <div class="info-card">
+                        <h3>🚀 開始使用</h3>
+                        <p>選擇一個翻譯服務並輸入API金鑰即可開始使用。推薦使用Google Gemini，有免費額度且翻譯品質優秀。</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiProvider">選擇翻譯服務：</label>
+                    <select id="apiProvider" class="form-control">
+                        <option value="">請選擇服務</option>
+                        <option value="google-gemini">Google Gemini (推薦 - 有免費額度)</option>
+                        <option value="openai">OpenAI GPT</option>
+                        <option value="claude">Claude (Anthropic)</option>
+                        <option value="bing-translator">Bing Translator</option>
+                        <option value="google-translate">Google Translate API</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiKey">API 金鑰：</label>
+                    <div class="input-with-button">
+                        <input type="password" id="apiKey" class="form-control" placeholder="輸入您的 API 金鑰">
+                        <button id="toggleKeyVisibility" class="toggle-button" title="顯示/隱藏金鑰">👁️</button>
+                    </div>
+                    <div class="button-group">
+                        <button id="validateKey" class="validate-button">驗證金鑰</button>
+                        <button id="getApiKey" class="info-button">如何獲取？</button>
+                    </div>
+                </div>
+                
+                <div id="validationResult" class="validation-result hidden"></div>
+                
+                <div class="advanced-settings" id="advancedSettings" style="display: none;">
+                    <h3>進階設定</h3>
+                    <div class="form-group">
+                        <label for="apiModel">模型選擇：</label>
+                        <select id="apiModel" class="form-control">
+                            <option value="gemini-pro">Gemini Pro (預設)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="maxTokens">最大Token數：</label>
+                        <input type="number" id="maxTokens" class="form-control" value="4000" min="1000" max="8000">
+                    </div>
+                </div>
+            </section>
+            
+            <section class="translation-preferences-section">
+                <h2>翻譯偏好設定</h2>
+                
+                <div class="form-group">
+                    <label for="targetLanguage">目標語言：</label>
+                    <select id="targetLanguage" class="form-control">
+                        <option value="zh-TW">繁體中文</option>
+                        <option value="zh-CN">簡體中文</option>
+                        <option value="ja">日文</option>
+                        <option value="ko">韓文</option>
+                        <option value="en">英文</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="translationPosition">翻譯顯示位置：</label>
+                    <select id="translationPosition" class="form-control">
+                        <option value="below">下方顯示 (推薦)</option>
+                        <option value="inline">內聯顯示</option>
+                        <option value="tooltip">工具提示</option>
+                    </select>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="showOriginalText" checked>
+                    <label for="showOriginalText">顯示原文對照</label>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="autoTranslateVisible">
+                    <label for="autoTranslateVisible">自動翻譯可見內容</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="excludeSelectors">排除選擇器 (進階)：</label>
+                    <input type="text" id="excludeSelectors" class="form-control" placeholder=".ad, .advertisement, .sponsor">
+                    <small class="form-text">用逗號分隔多個CSS選擇器，這些元素將不會被翻譯</small>
+                </div>
+            </section>
+            
+            <section class="usage-stats-section">
+                <h2>使用統計</h2>
+                <div id="usageStats" class="stats-container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="totalTranslations">0</div>
+                                <div class="stat-label">總翻譯次數</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔤</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="tokensUsed">0</div>
+                                <div class="stat-label">使用Token數</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="estimatedCost">$0.00</div>
+                                <div class="stat-label">預估成本</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-info">
+                                <div class="stat-value" id="lastResetDate">-</div>
+                                <div class="stat-label">上次重置</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-actions">
+                        <button id="refreshStats" class="secondary-button">刷新統計</button>
+                        <button id="resetStats" class="secondary-button">重置統計</button>
+                        <button id="checkQuota" class="secondary-button">檢查配額</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="settings-footer">
+            <div class="footer-info">
+                <small>設定會自動同步到您的所有裝置</small>
+            </div>
+            <div class="footer-actions">
+                <button id="saveSettings" class="primary-button">儲存設定</button>
+                <button id="resetSettings" class="secondary-button">重設為預設值</button>
+                <button id="exportSettings" class="secondary-button">匯出設定</button>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="js/settings.js"></script>
+</body>
+</html>
