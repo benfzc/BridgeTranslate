@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Translation Extension</title>
+    <title>Bridge Translate</title>
     <link rel="stylesheet" href="css/popup.css">
 </head>
 <body>
     <div class="popup-container">
         <div class="header">
-            <h1>網頁翻譯</h1>
+            <h1>翻譯橋</h1>
         </div>
-        
+
         <div class="main-controls">
             <button id="toggleTranslation" class="primary-button">
                 <span id="buttonText">開始翻譯</span>
                 <div id="loadingSpinner" class="spinner hidden"></div>
             </button>
         </div>
-        
+
         <div class="status-section">
             <div id="translationStatus" class="status-text">準備就緒</div>
             <div id="progressBar" class="progress-bar hidden">
                 <div id="progressFill" class="progress-fill"></div>
             </div>
         </div>
-        
+
         <div class="footer">
             <button id="settingsButton" class="secondary-button">設定</button>
         </div>
     </div>
-    
+
     <script src="js/popup.js"></script>
 </body>
 </html>

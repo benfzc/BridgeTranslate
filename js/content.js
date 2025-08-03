@@ -35,7 +35,7 @@ class WebTranslationContent {
             // 綁定事件
             this.attachEvents();
 
-            console.log('Web Translation Extension loaded');
+            console.log('Bridge Translate loaded');
         } catch (error) {
             console.error('初始化失敗:', error);
         }

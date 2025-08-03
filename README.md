@@ -1,6 +1,6 @@
-# 🌉 Bilingual Bridge | 雙語橋樑
+#  Bridge Translate | 翻譯橋
 
-A Chrome extension for instant bilingual translation with side-by-side comparison.  
+A Chrome extension for instant bilingual translation with side-by-side comparison.
 Chrome 瀏覽器擴展，提供即時雙語翻譯和並排對照功能。
 
 ## ✨ Features | 功能特色
@@ -45,7 +45,7 @@ Chrome 瀏覽器擴展，提供即時雙語翻譯和並排對照功能。
 
 ### API Configuration | API 配置
 - **Provider | 提供商**: Google Gemini (recommended | 推薦)
-- **Model | 模型**: 
+- **Model | 模型**:
   - Flash (faster, more quota | 更快，配額更多)
   - Pro (higher quality | 更高品質)
 - **Target Language | 目標語言**: Choose your preferred language | 選擇你偏好的語言
@@ -89,5 +89,5 @@ This project was developed with assistance from AI tools. Please use responsibly
 
 ---
 
-**Made with ❤️ for breaking down language barriers**  
+**Made with ❤️ for breaking down language barriers**
 **用 ❤️ 打造，為了打破語言障礙**

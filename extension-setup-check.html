@@ -13,20 +13,20 @@
             line-height: 1.6;
             background: #f5f5f5;
         }
-        
+
         .container {
             background: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
+
         h1 {
             color: #333;
             text-align: center;
             margin-bottom: 30px;
         }
-        
+
         .check-item {
             display: flex;
             align-items: center;
@@ -35,45 +35,45 @@
             border-radius: 8px;
             border: 1px solid #ddd;
         }
-        
+
         .check-item.success {
             background: #d4edda;
             border-color: #c3e6cb;
             color: #155724;
         }
-        
+
         .check-item.error {
             background: #f8d7da;
             border-color: #f5c6cb;
             color: #721c24;
         }
-        
+
         .check-item.warning {
             background: #fff3cd;
             border-color: #ffeaa7;
             color: #856404;
         }
-        
+
         .check-icon {
             font-size: 24px;
             margin-right: 15px;
             min-width: 30px;
         }
-        
+
         .check-content {
             flex: 1;
         }
-        
+
         .check-title {
             font-weight: bold;
             margin-bottom: 5px;
         }
-        
+
         .check-description {
             font-size: 14px;
             opacity: 0.8;
         }
-        
+
         .setup-instructions {
             background: #e3f2fd;
             padding: 20px;
@@ -81,21 +81,21 @@
             margin-top: 20px;
             border-left: 4px solid #2196f3;
         }
-        
+
         .setup-instructions h3 {
             margin-top: 0;
             color: #1976d2;
         }
-        
+
         .setup-instructions ol {
             margin: 10px 0;
             padding-left: 20px;
         }
-        
+
         .setup-instructions li {
             margin: 8px 0;
         }
-        
+
         .refresh-btn {
             display: block;
             width: 100%;
@@ -109,11 +109,11 @@
             margin-top: 20px;
             transition: background-color 0.2s;
         }
-        
+
         .refresh-btn:hover {
             background: #0056b3;
         }
-        
+
         .test-btn {
             display: block;
             width: 100%;
@@ -127,11 +127,11 @@
             margin-top: 10px;
             transition: background-color 0.2s;
         }
-        
+
         .test-btn:hover {
             background: #1e7e34;
         }
-        
+
         .test-btn:disabled {
             background: #6c757d;
             cursor: not-allowed;
@@ -140,8 +140,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Bilingual Bridge 擴展設定檢查</h1>
-        
+        <h1> Bridge Translate 擴展設定檢查</h1>
+
         <div id="check-results">
             <div class="check-item">
                 <div class="check-icon">⏳</div>
@@ -151,19 +151,19 @@
                 </div>
             </div>
         </div>
-        
+
         <button class="refresh-btn" onclick="runChecks()">🔄 重新檢查</button>
         <button class="test-btn" id="test-btn" onclick="openTestPage()" disabled>🧪 開啟測試頁面</button>
-        
+
         <div class="setup-instructions">
             <h3>📋 設定步驟</h3>
             <ol>
-                <li><strong>安裝擴展：</strong>確保 Bilingual Bridge 擴展已安裝並啟用</li>
+                <li><strong>安裝擴展：</strong>確保 Bridge Translate 擴展已安裝並啟用</li>
                 <li><strong>配置 API：</strong>點擊擴展圖標，進入設定頁面配置 AI 翻譯服務</li>
                 <li><strong>設定 API 金鑰：</strong>輸入有效的 Google Gemini API 金鑰</li>
                 <li><strong>測試功能：</strong>在任意英文網頁點擊翻譯按鈕測試</li>
             </ol>
-            
+
             <p><strong>💡 提示：</strong>如果檢查失敗，請確保：</p>
             <ul>
                 <li>擴展已正確安裝並啟用</li>
@@ -175,7 +175,7 @@
 
     <script>
         let checkResults = [];
-        
+
         function createCheckItem(icon, title, description, status) {
             return `
                 <div class="check-item ${status}">
@@ -187,15 +187,15 @@
                 </div>
             `;
         }
-        
+
         function updateResults() {
             const resultsDiv = document.getElementById('check-results');
             resultsDiv.innerHTML = checkResults.join('');
-            
+
             // 檢查是否所有必要項目都通過
             const hasExtension = checkResults.some(result => result.includes('擴展已載入') && result.includes('success'));
             const hasParagraphTranslator = checkResults.some(result => result.includes('段落翻譯器') && result.includes('success'));
-            
+
             const testBtn = document.getElementById('test-btn');
             if (hasExtension && hasParagraphTranslator) {
                 testBtn.disabled = false;
@@ -205,108 +205,108 @@
                 testBtn.textContent = '❌ 請先完成設定';
             }
         }
-        
+
         async function runChecks() {
             checkResults = [];
-            
+
             // 檢查 1: 擴展是否載入
             if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
                 checkResults.push(createCheckItem(
-                    '✅', 
-                    '擴展已載入', 
-                    'Chrome 擴展 API 可用', 
+                    '✅',
+                    '擴展已載入',
+                    'Chrome 擴展 API 可用',
                     'success'
                 ));
             } else {
                 checkResults.push(createCheckItem(
-                    '❌', 
-                    '擴展未載入', 
-                    '請確保擴展已安裝並啟用', 
+                    '❌',
+                    '擴展未載入',
+                    '請確保擴展已安裝並啟用',
                     'error'
                 ));
             }
-            
+
             // 檢查 2: 內容腳本是否載入
             setTimeout(() => {
                 if (window.webTranslationContent) {
                     checkResults.push(createCheckItem(
-                        '✅', 
-                        '內容腳本已載入', 
-                        `翻譯模式: ${window.webTranslationContent.translationMode}`, 
+                        '✅',
+                        '內容腳本已載入',
+                        `翻譯模式: ${window.webTranslationContent.translationMode}`,
                         'success'
                     ));
                 } else {
                     checkResults.push(createCheckItem(
-                        '❌', 
-                        '內容腳本未載入', 
-                        '請重新載入頁面或檢查擴展權限', 
+                        '❌',
+                        '內容腳本未載入',
+                        '請重新載入頁面或檢查擴展權限',
                         'error'
                     ));
                 }
-                
+
                 // 檢查 3: 段落翻譯器是否可用
                 if (window.webTranslationContent && window.webTranslationContent.paragraphTranslator) {
                     checkResults.push(createCheckItem(
-                        '✅', 
-                        '段落翻譯器可用', 
-                        '新的段落級翻譯功能已啟用', 
+                        '✅',
+                        '段落翻譯器可用',
+                        '新的段落級翻譯功能已啟用',
                         'success'
                     ));
                 } else {
                     checkResults.push(createCheckItem(
-                        '⚠️', 
-                        '段落翻譯器不可用', 
-                        '可能降級到舊版翻譯系統', 
+                        '⚠️',
+                        '段落翻譯器不可用',
+                        '可能降級到舊版翻譯系統',
                         'warning'
                     ));
                 }
-                
+
                 // 檢查 4: 智能排程器是否可用
                 if (window.webTranslationContent && window.webTranslationContent.smartScheduler) {
                     checkResults.push(createCheckItem(
-                        '✅', 
-                        '智能排程器可用', 
-                        '智能翻譯排程系統已啟用', 
+                        '✅',
+                        '智能排程器可用',
+                        '智能翻譯排程系統已啟用',
                         'success'
                     ));
                 } else {
                     checkResults.push(createCheckItem(
-                        '⚠️', 
-                        '智能排程器不可用', 
-                        '可能影響翻譯效率', 
+                        '⚠️',
+                        '智能排程器不可用',
+                        '可能影響翻譯效率',
                         'warning'
                     ));
                 }
-                
+
                 // 檢查 5: 翻譯按鈕是否存在
                 const translationButton = document.querySelector('.translation-button-container');
                 if (translationButton) {
                     checkResults.push(createCheckItem(
-                        '✅', 
-                        '翻譯按鈕已創建', 
-                        '可以開始使用翻譯功能', 
+                        '✅',
+                        '翻譯按鈕已創建',
+                        '可以開始使用翻譯功能',
                         'success'
                     ));
                 } else {
                     checkResults.push(createCheckItem(
-                        '⚠️', 
-                        '翻譯按鈕未找到', 
-                        '按鈕可能正在載入中', 
+                        '⚠️',
+                        '翻譯按鈕未找到',
+                        '按鈕可能正在載入中',
                         'warning'
                     ));
                 }
-                
+
                 updateResults();
             }, 1000);
-            
+
             // 立即更新已有結果
             updateResults();
         }
-        
+
         function openTestPage() {
             window.open('test-extension-integration.html', '_blank');
         }
-        
+
         // 頁面載入時自動運行檢查
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(runChecks, 500);

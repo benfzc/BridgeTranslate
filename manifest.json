@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Bilingual Bridge",
+  "name": "Bridge Translate",
   "version": "1.0.0",
-  "description": "Bilingual Bridge - Smart web translation extension with side-by-side comparison",
+  "description": "Bridge Translate - Smart web translation extension with side-by-side comparison",
 
   "permissions": [
     "storage",
@@ -44,7 +44,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Bilingual Bridge"
+    "default_title": "Bridge Translate"
   },
 
   "options_page": "settings.html",
