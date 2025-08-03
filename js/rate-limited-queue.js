@@ -159,7 +159,45 @@ class RateLimitedTranslationQueue {
     }
     
     /**
-     * 計算需要等待的時間 (毫秒)
+     * 計算最佳等待時間以維持均勻的請求分佈
+     * @returns {number} 等待時間（毫秒）
+     */
+    calculateOptimalWaitTime() {
+        const now = Date.now();
+        
+        // 清理過期的請求記錄
+        const oneMinuteAgo = now - 60000;
+        this.requestHistory = this.requestHistory.filter(time => time > oneMinuteAgo);
+        
+        // 如果沒有請求記錄，可以立即發送
+        if (this.requestHistory.length === 0) {
+            return 0;
+        }
+        
+        // 計算理想的請求間隔（毫秒）
+        const idealInterval = 60000 / this.rpmLimit; // 15 RPM = 4000ms 間隔
+        
+        // 獲取最後一次請求的時間
+        const lastRequestTime = Math.max(...this.requestHistory);
+        const timeSinceLastRequest = now - lastRequestTime;
+        
+        // 如果距離上次請求的時間小於理想間隔，需要等待
+        if (timeSinceLastRequest < idealInterval) {
+            return idealInterval - timeSinceLastRequest;
+        }
+        
+        // 檢查是否達到 RPM 限制
+        if (this.requestHistory.length >= this.rpmLimit) {
+            const oldestRequest = Math.min(...this.requestHistory);
+            const waitTime = Math.max(0, 60000 - (now - oldestRequest));
+            return waitTime;
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * 計算需要等待的時間 (毫秒) - 舊版本，保留作為備用
      * @returns {number} 等待時間
      */
     getWaitTime() {
@@ -237,16 +275,14 @@ class RateLimitedTranslationQueue {
             return;
         }
         
-        // 檢查是否可以發送請求
-        if (!this.canSendRequest()) {
-            const waitTime = this.getWaitTime();
-            console.log(`達到 API 限制，等待 ${Math.ceil(waitTime / 1000)} 秒`);
-            
-            // 等待後重試
+        // 計算需要等待的時間以維持均勻的請求間隔
+        const waitTime = this.calculateOptimalWaitTime();
+        
+        if (waitTime > 0) {
+            console.log(`等待 ${Math.ceil(waitTime / 1000)} 秒以維持 API 速率限制`);
             setTimeout(() => {
                 this.processNext();
-            }, waitTime + 1000); // 多等 1 秒確保安全
-            
+            }, waitTime);
             return;
         }
         
@@ -284,10 +320,8 @@ class RateLimitedTranslationQueue {
             }
         }
         
-        // 繼續處理下一個項目 (短暫延遲確保穩定)
-        setTimeout(() => {
-            this.processNext();
-        }, 100);
+        // 立即處理下一個項目（等待時間由 calculateOptimalWaitTime 控制）
+        this.processNext();
     }
     
     /**

@@ -56,7 +56,7 @@ graph TB
 
 1. **全頁面分析**: 用戶點擊翻譯按鈕時，立即分析整個頁面內容
 2. **智能排程**: 根據優先級將所有翻譯任務加入隊列
-3. **速率限制**: 嚴格遵守 API 的 RPM (Requests Per Minute) 限制
+3. **主動式速率限制**: 均勻分佈請求以避免觸發 API 限制，每 4 秒發送一個請求
 4. **漸進式顯示**: 翻譯完成後立即顯示，提供即時反饋
 
 #### 翻譯隊列架構
@@ -188,12 +188,32 @@ class RateLimitManager {
         return rpmCheck && tpmCheck && rpdCheck;
     }
     
-    getWaitTime() {
-        // 計算需要等待多長時間才能發送下一個請求
+    calculateOptimalWaitTime() {
+        // 主動式速率控制：計算最佳等待時間以維持均勻的請求分佈
+        const now = Date.now();
+        const idealInterval = 60000 / this.rpmLimit; // 15 RPM = 4000ms 間隔
+        
+        // 清理過期的請求記錄
+        const oneMinuteAgo = now - 60000;
+        this.requestHistory = this.requestHistory.filter(time => time > oneMinuteAgo);
+        
+        if (this.requestHistory.length === 0) return 0;
+        
+        // 基於最後一次請求時間計算等待時間
+        const lastRequestTime = Math.max(...this.requestHistory);
+        const timeSinceLastRequest = now - lastRequestTime;
+        
+        // 確保至少間隔 4 秒
+        if (timeSinceLastRequest < idealInterval) {
+            return idealInterval - timeSinceLastRequest;
+        }
+        
+        // 備用檢查：如果仍然達到限制
         if (this.requestHistory.length >= this.rpmLimit) {
             const oldestRequest = Math.min(...this.requestHistory);
-            return Math.max(0, 60000 - (Date.now() - oldestRequest));
+            return Math.max(0, 60000 - (now - oldestRequest));
         }
+        
         return 0;
     }
 }
