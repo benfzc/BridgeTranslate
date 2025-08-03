@@ -100,11 +100,16 @@ class PopupController {
         try {
             // 檢查設定
             const settings = await this.getSettings();
-            if (!settings.apiProvider || !settings.apiKey) {
+            console.log('Popup 檢查設定:', settings);
+            
+            if (!settings?.apiConfiguration?.provider || !settings?.apiConfiguration?.apiKey) {
+                console.log('設定檢查失敗，打開設定頁面');
                 this.showError('請先設定 AI 翻譯服務');
                 this.openSettings();
                 return;
             }
+            
+            console.log('設定檢查通過，繼續翻譯');
 
             // 發送切換翻譯訊息到 content script
             const response = await chrome.tabs.sendMessage(this.currentTab.id, {

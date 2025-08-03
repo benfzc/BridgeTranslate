@@ -1,43 +1,102 @@
 /* Content Script 樣式 - 注入到網頁中的翻譯 UI */
 
-/* 翻譯按鈕樣式 */
-.web-translation-button {
+/* 漂亮的翻譯按鈕樣式 */
+.translation-button-container {
     position: fixed !important;
     top: 20px !important;
     right: 20px !important;
-    z-index: 999999 !important;
-    background-color: #007bff !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 50% !important;
-    width: 56px !important;
-    height: 56px !important;
-    cursor: pointer !important;
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
-    transition: all 0.3s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 18px !important;
+    z-index: 10000 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-.web-translation-button:hover {
-    background-color: #0056b3 !important;
-    transform: scale(1.05) !important;
+/* 主翻譯按鈕 */
+.translation-button {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
 
-.web-translation-button.translating {
-    background-color: #ffc107 !important;
+/* 按鈕狀態樣式 */
+.translation-button.idle {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+.translation-button.idle:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.translation-button.translating {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: white !important;
     animation: pulse 2s infinite !important;
 }
 
-.web-translation-button.completed {
-    background-color: #28a745 !important;
+.translation-button.completed {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+    color: white !important;
 }
 
-.web-translation-button.error {
-    background-color: #dc3545 !important;
+.translation-button.completed:hover {
+    transform: scale(1.05) !important;
+}
+
+.translation-button.error {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%) !important;
+    color: #d32f2f !important;
+}
+
+.translation-button.error:hover {
+    transform: scale(1.05) !important;
+}
+
+/* 按鈕圖示 */
+.translation-button-icon {
+    transition: transform 0.3s ease !important;
+}
+
+.translation-button.translating .translation-button-icon {
+    animation: rotate 2s linear infinite !important;
+}
+
+/* 工具提示 */
+.translation-tooltip {
+    position: absolute !important;
+    bottom: -35px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: all 0.3s ease !important;
+    pointer-events: none !important;
+}
+
+.translation-button-container:hover .translation-tooltip {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* 動畫 */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 @keyframes pulse {

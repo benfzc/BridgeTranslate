@@ -6,7 +6,7 @@ class BasicGeminiClient {
     constructor(apiKey) {
         this.apiKey = apiKey;
         this.baseURL = 'https://generativelanguage.googleapis.com/v1beta';
-        this.model = 'gemini-1.5-flash-latest';
+        this.model = 'gemini-2.5-flash-lite';
     }
     
     async translateText(text, targetLanguage = 'zh-TW') {
@@ -453,7 +453,7 @@ class HybridBackgroundService {
             apiConfiguration: result.apiConfiguration || {
                 provider: '',
                 apiKey: '',
-                model: 'gemini-1.5-flash-latest',
+                model: 'gemini-2.5-flash-lite',
                 maxTokensPerRequest: 4000
             },
             translationPreferences: result.translationPreferences || {
@@ -483,7 +483,7 @@ class HybridBackgroundService {
             apiConfiguration: {
                 provider: '',
                 apiKey: '',
-                model: 'gemini-1.5-flash-latest',
+                model: 'gemini-2.5-flash-lite',
                 maxTokensPerRequest: 4000
             },
             translationPreferences: {

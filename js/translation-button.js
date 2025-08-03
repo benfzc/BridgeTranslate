@@ -27,19 +27,36 @@ class TranslationButton {
      * 初始化翻譯按鈕
      */
     init() {
-        this.createButton();
-        this.attachEventListeners();
-        this.setState('idle');
+        console.log('開始初始化 TranslationButton...');
+        
+        try {
+            console.log('創建按鈕 DOM...');
+            this.createButton();
+            
+            console.log('附加事件監聽器...');
+            this.attachEventListeners();
+            
+            console.log('設定初始狀態...');
+            this.setState('idle');
+            
+            console.log('TranslationButton 初始化完成');
+        } catch (error) {
+            console.error('TranslationButton 初始化失敗:', error);
+            console.error('錯誤堆疊:', error.stack);
+        }
     }
     
     /**
      * 創建按鈕DOM結構
      */
     createButton() {
+        console.log('創建按鈕容器...');
+        
         // 創建容器
         this.container = document.createElement('div');
         this.container.className = 'translation-button-container';
         this.container.id = 'web-translation-button-container';
+        console.log('容器創建完成:', this.container);
         
         // 創建主按鈕
         this.button = document.createElement('button');
@@ -72,7 +89,13 @@ class TranslationButton {
         this.container.appendChild(this.tooltip);
         
         // 添加到頁面
-        document.body.appendChild(this.container);
+        console.log('將按鈕添加到頁面...');
+        if (document.body) {
+            document.body.appendChild(this.container);
+            console.log('按鈕已添加到頁面');
+        } else {
+            console.error('document.body 不存在，無法添加按鈕');
+        }
     }
     
     /**
@@ -260,15 +283,27 @@ class TranslationButton {
      * 顯示按鈕
      */
     show() {
+        console.log('顯示翻譯按鈕...');
+        
         if (this.container && !this.isVisible) {
+            console.log('設定按鈕顯示樣式...');
             this.container.style.display = 'block';
+            this.container.style.opacity = '0';
+            this.container.style.transform = 'scale(0.8)';
             this.isVisible = true;
             
             // 添加淡入動畫
             setTimeout(() => {
                 this.container.style.opacity = '1';
                 this.container.style.transform = 'scale(1)';
+                console.log('按鈕淡入動畫完成');
             }, 10);
+            
+            console.log('翻譯按鈕已顯示');
+        } else if (!this.container) {
+            console.error('按鈕容器不存在，無法顯示');
+        } else if (this.isVisible) {
+            console.log('按鈕已經可見，跳過顯示');
         }
     }
     

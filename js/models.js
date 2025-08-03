@@ -58,7 +58,7 @@
  * 翻譯偏好設定
  * @typedef {Object} TranslationPreferences
  * @property {string} targetLanguage - 目標語言
- * @property {boolean} showOriginalText - 是否顯示原文
+
  * @property {'below'|'inline'|'tooltip'} translationPosition - 翻譯位置
  * @property {boolean} autoTranslateVisible - 自動翻譯可見內容
  * @property {string[]} excludeSelectors - 排除的CSS選擇器
@@ -177,7 +177,7 @@ function validateTranslationPreferences(data) {
     if (!data || typeof data !== 'object') return false;
     
     const validPositions = ['below', 'inline', 'tooltip'];
-    const requiredFields = ['targetLanguage', 'showOriginalText', 'translationPosition', 'autoTranslateVisible', 'excludeSelectors'];
+    const requiredFields = ['targetLanguage', 'translationPosition', 'autoTranslateVisible', 'excludeSelectors'];
     
     // 檢查必要欄位
     for (const field of requiredFields) {
@@ -186,7 +186,7 @@ function validateTranslationPreferences(data) {
     
     // 檢查資料類型和值
     if (typeof data.targetLanguage !== 'string' || data.targetLanguage.trim() === '') return false;
-    if (typeof data.showOriginalText !== 'boolean') return false;
+
     if (!validPositions.includes(data.translationPosition)) return false;
     if (typeof data.autoTranslateVisible !== 'boolean') return false;
     if (!Array.isArray(data.excludeSelectors)) return false;

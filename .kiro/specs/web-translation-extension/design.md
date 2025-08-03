@@ -49,6 +49,77 @@ graph TB
     end
 ```
 
+### 視窗內翻譯 (Viewport-based Translation) 設計
+
+#### 核心概念
+為了優化 API 配額使用和提升用戶體驗，系統採用視窗內翻譯策略：
+
+1. **初始翻譯**: 用戶點擊翻譯按鈕時，只翻譯當前視窗內可見的內容
+2. **滾動翻譯**: 用戶向下滾動時，自動翻譯新進入視窗的未翻譯內容
+3. **狀態追蹤**: 利用現有的翻譯標記系統避免重複翻譯
+
+#### 翻譯狀態標記系統
+```javascript
+// 每個翻譯元素的標記
+<div class="translation-content" 
+     data-segment-id="segment_123" 
+     data-translation-id="trans_123">
+    翻譯內容
+</div>
+
+// 狀態追蹤 Maps
+renderedTranslations: Map<segmentId, translationData>
+loadingElements: Map<segmentId, loadingElement>
+errorElements: Map<segmentId, errorElement>
+```
+
+#### 翻譯邊界檢測
+```mermaid
+graph TD
+    A[用戶滾動] --> B[檢測視窗範圍]
+    B --> C[查找翻譯邊界]
+    C --> D{是否有已翻譯內容?}
+    D -->|是| E[找到最後翻譯元素位置]
+    D -->|否| F[從視窗頂部開始]
+    E --> G[只翻譯邊界以下的新內容]
+    F --> G
+    G --> H[避免重複翻譯]
+```
+
+#### 實現策略
+
+**階段 1: 基礎檢測**
+- 使用 `getBoundingClientRect()` 檢測元素可見性
+- 利用 `document.querySelectorAll('.translation-content')` 找到翻譯邊界
+- 簡單的滾動事件監聽 (節流處理)
+
+**階段 2: 優化版本**
+- 使用 `Intersection Observer API` 提升性能
+- 智能預載入 (rootMargin 設定)
+- 批次翻譯處理
+
+**階段 3: 進階功能**
+- 動態內容檢測 (MutationObserver)
+- 智能翻譯優先級
+- 用戶行為預測
+
+#### 配額保護機制
+```javascript
+// 翻譯限制策略
+const TRANSLATION_LIMITS = {
+    FREE_TIER: {
+        maxPerMinute: 15,
+        maxPerDay: 1000,
+        batchSize: 3
+    },
+    PREMIUM_TIER: {
+        maxPerMinute: 60,
+        maxPerDay: 10000,
+        batchSize: 10
+    }
+};
+```
+
 ### 技術架構選擇 (MVP版本)
 
 - **外掛格式**: Manifest V3 (Chrome/Edge優先，Firefox後續支援)

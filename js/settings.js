@@ -46,7 +46,7 @@ class SettingsController {
             // 翻譯偏好
             targetLanguage: document.getElementById('targetLanguage'),
             translationPosition: document.getElementById('translationPosition'),
-            showOriginalText: document.getElementById('showOriginalText'),
+
             autoTranslateVisible: document.getElementById('autoTranslateVisible'),
             excludeSelectors: document.getElementById('excludeSelectors'),
             
@@ -170,14 +170,14 @@ class SettingsController {
         const apiConfig = this.settings.apiConfiguration || {};
         this.elements.apiProvider.value = apiConfig.provider || '';
         this.elements.apiKey.value = apiConfig.apiKey || '';
-        this.elements.apiModel.value = apiConfig.model || 'gemini-1.5-flash-latest';
+        this.elements.apiModel.value = apiConfig.model || 'gemini-2.5-flash-lite';
         this.elements.maxTokens.value = apiConfig.maxTokensPerRequest || 4000;
         
         // 更新翻譯偏好
         const prefs = this.settings.translationPreferences || {};
         this.elements.targetLanguage.value = prefs.targetLanguage || 'zh-TW';
         this.elements.translationPosition.value = prefs.translationPosition || 'below';
-        this.elements.showOriginalText.checked = prefs.showOriginalText !== false;
+
         this.elements.autoTranslateVisible.checked = prefs.autoTranslateVisible || false;
         this.elements.excludeSelectors.value = (prefs.excludeSelectors || []).join(', ');
         
@@ -261,9 +261,10 @@ class SettingsController {
     updateModelOptions(provider) {
         const modelOptions = {
             'google-gemini': [
-                { value: 'gemini-1.5-flash-latest', text: 'Gemini 1.5 Flash Latest (推薦，配額更多)' },
-                { value: 'gemini-1.5-pro-latest', text: 'Gemini 1.5 Pro Latest (高品質)' },
-                { value: 'gemini-1.5-pro-002', text: 'Gemini 1.5 Pro 002' }
+                { value: 'gemini-2.5-flash-lite', text: 'Gemini 2.5 Flash-Lite (推薦，最多配額)' },
+                { value: 'gemini-2.0-flash-lite', text: 'Gemini 2.0 Flash-Lite (高頻率)' },
+                { value: 'gemini-2.5-flash', text: 'Gemini 2.5 Flash (平衡)' },
+                { value: 'gemini-2.5-pro', text: 'Gemini 2.5 Pro (最高品質)' }
             ],
             'openai': [
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
@@ -431,7 +432,7 @@ class SettingsController {
             translationPreferences: {
                 targetLanguage: this.elements.targetLanguage.value,
                 translationPosition: this.elements.translationPosition.value,
-                showOriginalText: this.elements.showOriginalText.checked,
+
                 autoTranslateVisible: this.elements.autoTranslateVisible.checked,
                 excludeSelectors: excludeSelectors
             },
@@ -475,13 +476,13 @@ class SettingsController {
                 apiConfiguration: {
                     provider: '',
                     apiKey: '',
-                    model: 'gemini-1.5-flash-latest',
+                    model: 'gemini-2.5-flash-lite',
                     maxTokensPerRequest: 4000
                 },
                 translationPreferences: {
                     targetLanguage: 'zh-TW',
                     translationPosition: 'below',
-                    showOriginalText: true,
+
                     autoTranslateVisible: false,
                     excludeSelectors: ['.ad', '.advertisement', '.sponsor']
                 },

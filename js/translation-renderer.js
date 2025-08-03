@@ -334,17 +334,10 @@ class TranslationRenderer {
         translationElement.setAttribute('data-segment-id', segment.id);
         translationElement.setAttribute('data-translation-id', `trans_${segment.id}`);
         
-        // 設定翻譯內容
-        if (options.showOriginal) {
-            translationElement.innerHTML = `
-                <div class="translation-text">${translation.translatedText}</div>
-                <div class="original-text" style="font-size: 12px; color: #6c757d; margin-top: 4px; font-style: italic;">
-                    原文: ${translation.originalText}
-                </div>
-            `;
-        } else {
-            translationElement.textContent = translation.translatedText;
-        }
+        // 設定翻譯內容 - 只顯示翻譯文本，原文已在網頁上
+        translationElement.innerHTML = `
+            <div class="translation-text">${translation.translatedText}</div>
+        `;
         
         // 添加元數據
         translationElement.title = `翻譯提供者: ${translation.provider} | Token使用: ${translation.tokensUsed}`;

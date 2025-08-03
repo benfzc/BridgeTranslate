@@ -23,21 +23,36 @@ class TranslationButtonManager {
      */
     init() {
         if (this.isInitialized) {
+            console.log('按鈕管理器已經初始化，跳過');
             return;
         }
         
         try {
+            console.log('開始初始化翻譯按鈕管理器...');
+            
             // 檢查是否已存在翻譯按鈕
             const existingButton = document.getElementById('web-translation-button-container');
             if (existingButton) {
+                console.log('移除現有的翻譯按鈕');
                 existingButton.remove();
             }
             
+            // 檢查 TranslationButton 類是否可用
+            if (typeof TranslationButton === 'undefined') {
+                throw new Error('TranslationButton 類未定義');
+            }
+            
             // 創建新的翻譯按鈕
+            console.log('正在創建 TranslationButton...');
             this.button = new TranslationButton();
+            console.log('TranslationButton 創建成功:', this.button);
+            
+            // 附加事件監聽器
+            console.log('附加事件監聽器...');
             this.attachEventListeners();
             
             // 顯示按鈕
+            console.log('顯示翻譯按鈕...');
             this.button.show();
             
             this.isInitialized = true;
@@ -45,6 +60,7 @@ class TranslationButtonManager {
             
         } catch (error) {
             console.error('翻譯按鈕初始化失敗:', error);
+            console.error('錯誤堆疊:', error.stack);
         }
     }
     
