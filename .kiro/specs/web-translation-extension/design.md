@@ -219,6 +219,168 @@ class RateLimitManager {
 }
 ```
 
+#### 段落級翻譯優化系統 (Paragraph-Level Translation)
+
+採用簡化且高效的段落級翻譯策略，自動忽略HTML標籤：
+
+```mermaid
+graph TD
+    A[檢測段落元素] --> B[提取純文本內容]
+    B --> C{內容長度檢查}
+    C -->|適中| D[發送翻譯請求]
+    C -->|過長| E[智能分割段落]
+    C -->|過短/空白| F[跳過翻譯]
+    D --> G[獲得翻譯結果]
+    E --> D
+    G --> H[在段落下方插入翻譯]
+    H --> I[完成翻譯]
+    F --> I
+```
+
+#### 段落翻譯處理器
+```javascript
+class ParagraphTranslator {
+    constructor(options = {}) {
+        // 段落級元素標籤
+        this.paragraphTags = [
+            'p', 'div', 'article', 'section',       // 基本段落
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',    // 標題
+            'li', 'dd', 'dt',                       // 列表項
+            'blockquote', 'figcaption'              // 引用和說明
+        ];
+        
+        this.options = {
+            maxParagraphLength: 1500,    // 最大段落長度
+            minParagraphLength: 10,      // 最小段落長度
+            splitStrategy: 'sentence',   // 分割策略：sentence | length
+            ...options
+        };
+    }
+    
+    // 檢測是否為可翻譯的段落
+    isParagraphElement(element) {
+        const tagName = element.tagName.toLowerCase();
+        return this.paragraphTags.includes(tagName);
+    }
+    
+    // 提取段落純文本（自動忽略所有HTML標籤）
+    extractParagraphText(element) {
+        // 使用 textContent 自動去除所有HTML標籤
+        const plainText = element.textContent.trim();
+        
+        // 清理多餘的空白字符
+        return plainText.replace(/\s+/g, ' ');
+    }
+    
+    // 檢查段落是否適合翻譯
+    shouldTranslateParagraph(text) {
+        // 長度檢查
+        if (text.length < this.options.minParagraphLength) return false;
+        if (text.length === 0) return false;
+        
+        // 內容類型檢查（排除純數字、符號等）
+        const meaningfulText = text.replace(/[^\w\s]/g, '').trim();
+        if (meaningfulText.length < 5) return false;
+        
+        return true;
+    }
+    
+    // 智能分割過長段落
+    splitLongParagraph(text) {
+        if (text.length <= this.options.maxParagraphLength) {
+            return [text];
+        }
+        
+        const segments = [];
+        
+        if (this.options.splitStrategy === 'sentence') {
+            // 按句子分割
+            const sentences = text.split(/[.!?]+\s+/);
+            let currentSegment = '';
+            
+            for (const sentence of sentences) {
+                if ((currentSegment + sentence).length > this.options.maxParagraphLength) {
+                    if (currentSegment) {
+                        segments.push(currentSegment.trim());
+                        currentSegment = sentence;
+                    } else {
+                        // 單個句子過長，按長度強制分割
+                        segments.push(...this.splitByLength(sentence));
+                    }
+                } else {
+                    currentSegment += (currentSegment ? '. ' : '') + sentence;
+                }
+            }
+            
+            if (currentSegment) {
+                segments.push(currentSegment.trim());
+            }
+        } else {
+            // 按長度分割
+            segments.push(...this.splitByLength(text));
+        }
+        
+        return segments.filter(seg => seg.trim().length > 0);
+    }
+    
+    // 按長度強制分割
+    splitByLength(text) {
+        const segments = [];
+        const maxLength = this.options.maxParagraphLength;
+        
+        for (let i = 0; i < text.length; i += maxLength) {
+            segments.push(text.substring(i, i + maxLength));
+        }
+        
+        return segments;
+    }
+    
+    // 翻譯單個段落
+    async translateParagraph(element) {
+        const plainText = this.extractParagraphText(element);
+        
+        if (!this.shouldTranslateParagraph(plainText)) {
+            return null; // 跳過翻譯
+        }
+        
+        // 處理過長段落
+        const textSegments = this.splitLongParagraph(plainText);
+        const translatedSegments = [];
+        
+        // 翻譯每個片段
+        for (const segment of textSegments) {
+            const translation = await this.apiManager.translate(segment);
+            translatedSegments.push(translation);
+        }
+        
+        // 合併翻譯結果
+        const fullTranslation = translatedSegments.join(' ');
+        
+        // 在原段落下方插入翻譯
+        this.insertTranslationBelow(element, fullTranslation);
+        
+        return {
+            originalText: plainText,
+            translatedText: fullTranslation,
+            segmentCount: textSegments.length
+        };
+    }
+    
+    // 在段落下方插入翻譯結果
+    insertTranslationBelow(originalElement, translatedText) {
+        const translationElement = document.createElement('div');
+        translationElement.className = 'web-translation-result';
+        translationElement.textContent = translatedText;
+        
+        // 插入到原段落後面
+        originalElement.parentNode.insertBefore(
+            translationElement, 
+            originalElement.nextSibling
+        );
+    }
+}
+```
+
 #### 內容過濾策略 (當前實現)
 ```javascript
 // 簡化的內容過濾邏輯 - 基於 HTML 結構而非內容判斷

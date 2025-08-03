@@ -27,6 +27,7 @@
         "js/debug-helper.js",
         "js/models.js",
         "js/content-analyzer.js",
+        "js/paragraph-translator.js",
         "js/translation-renderer.js",
         "js/translation-button.js",
         "js/button-manager.js",
