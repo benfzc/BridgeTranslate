@@ -87,8 +87,14 @@ class ContentAnalyzer {
      * @param {HTMLElement} rootElement - 根元素
      * @returns {Node[]} 文本節點陣列
      */
-    detectTextNodes(rootElement) {
+    detectTextNodes(rootElement = document.body) {
         const textNodes = [];
+        
+        // 確保 rootElement 是有效的 DOM 節點
+        if (!rootElement || !rootElement.nodeType) {
+            console.error('Invalid rootElement provided to detectTextNodes:', rootElement);
+            rootElement = document.body;
+        }
         
         // 使用TreeWalker遍歷所有文本節點
         const walker = document.createTreeWalker(

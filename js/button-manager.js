@@ -147,13 +147,7 @@ class TranslationButtonManager {
                 }
             }, 300);
             
-            // 模擬可能的錯誤（10%機率）
-            if (Math.random() < 0.1) {
-                setTimeout(() => {
-                    clearInterval(interval);
-                    reject(new Error('API連接失敗'));
-                }, 2000);
-            }
+            // 移除模擬錯誤邏輯 - 這會干擾實際翻譯功能
         });
     }
     
