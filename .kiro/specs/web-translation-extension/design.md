@@ -485,6 +485,121 @@ class TranslationErrorHandler {
 }
 ```
 
+### 翻譯按鈕隱藏控制系統設計
+
+#### 核心概念
+為了解決翻譯按鈕有時會擋住畫面內容的問題，系統提供一個簡單的按鈕隱藏/顯示控制機制。這個功能專注於UI層面的控制，不影響翻譯功能的背景處理。
+
+#### 按鈕隱藏控制架構
+```mermaid
+graph TB
+    A[擴展圖示] --> B[Popup 彈出視窗]
+    B --> C[按鈕隱藏控制器]
+    C --> D[Background Script]
+    D --> E[Content Script 通訊]
+    E --> F[翻譯按鈕管理器]
+    F --> G[按鈕顯示/隱藏]
+    
+    subgraph "視覺反饋"
+        H[圖示狀態更新]
+        I[工具提示顯示]
+    end
+    
+    C --> H
+    C --> I
+    
+    subgraph "狀態管理"
+        J[Chrome Storage]
+        K[跨頁面狀態同步]
+    end
+    
+    D --> J
+    J --> K
+```
+
+#### 按鈕隱藏控制器介面
+```javascript
+interface ButtonVisibilityController {
+  // 狀態管理
+  isButtonVisible: boolean;
+  
+  // 核心功能
+  toggleButtonVisibility(): Promise<void>;
+  hideButtons(): Promise<void>;
+  showButtons(): Promise<void>;
+  
+  // 狀態查詢
+  getButtonVisibilityStatus(): Promise<ButtonVisibilityStatus>;
+  
+  // 事件處理
+  onVisibilityChange?: (status: ButtonVisibilityStatus) => void;
+}
+
+interface ButtonVisibilityStatus {
+  buttonVisible: boolean;
+  hasActiveTranslations: boolean;
+  translationContentVisible: boolean;
+}
+```
+
+#### 擴展圖示管理器
+```javascript
+interface ExtensionIconManager {
+  // 圖示狀態更新
+  updateIcon(buttonVisible: boolean): void;
+  updateTooltip(status: ButtonVisibilityStatus): void;
+  
+  // 圖示資源
+  normalIcon: string;
+  hiddenButtonIcon: string;
+  
+  // 工具提示文字
+  buttonVisibleTooltip: string;
+  buttonHiddenTooltip: string;
+}
+```
+
+#### 與現有系統整合
+```javascript
+class WebTranslationContent {
+  // 新增方法：隱藏所有翻譯按鈕
+  hideTranslationButtons() {
+    if (this.translationButton) {
+      this.translationButton.hide();
+    }
+    // 保存當前翻譯內容顯示狀態
+    this.saveTranslationContentVisibility();
+  }
+  
+  // 新增方法：顯示所有翻譯按鈕
+  showTranslationButtons() {
+    if (this.translationButton) {
+      this.translationButton.show();
+    }
+    // 恢復之前的翻譯內容顯示狀態
+    this.restoreTranslationContentVisibility();
+  }
+  
+  // 新增方法：保存翻譯內容顯示狀態
+  saveTranslationContentVisibility() {
+    const isVisible = this.isTranslationContentVisible();
+    chrome.storage.local.set({ 'translation_content_visible': isVisible });
+  }
+  
+  // 新增方法：恢復翻譯內容顯示狀態
+  restoreTranslationContentVisibility() {
+    chrome.storage.local.get(['translation_content_visible'], (result) => {
+      const wasVisible = result.translation_content_visible ?? true;
+      if (wasVisible) {
+        this.showTranslationContent();
+      } else {
+        this.hideTranslationContent();
+      }
+    });
+  }
+}
+```
+
 ### 技術架構選擇 (MVP版本)
 
 - **外掛格式**: Manifest V3 (Chrome/Edge優先，Firefox後續支援)

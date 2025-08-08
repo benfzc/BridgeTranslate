@@ -32,6 +32,9 @@ class WebTranslationContent {
             // 創建組件
             this.createComponents();
 
+            // 載入按鈕可見性狀態
+            await this.loadButtonVisibilityState();
+
             // 綁定事件
             this.attachEvents();
 
@@ -667,6 +670,48 @@ class WebTranslationContent {
                     sendResponse({ success: true });
                     break;
 
+                case 'TOGGLE_BUTTON_VISIBILITY':
+                    try {
+                        console.log('📨 收到按鈕可見性切換訊息:', message);
+                        this.handleButtonVisibilityToggle(message.visible);
+                        sendResponse({ 
+                            success: true, 
+                            timestamp: Date.now(),
+                            visible: message.visible,
+                            source: message.source || 'unknown'
+                        });
+                    } catch (error) {
+                        console.error('❌ 處理按鈕可見性切換失敗:', error);
+                        sendResponse({ 
+                            success: false, 
+                            error: error.message,
+                            timestamp: Date.now()
+                        });
+                    }
+                    break;
+
+                case 'GET_TRANSLATION_STATUS':
+                    const status = {
+                        isTranslating: this.isTranslating,
+                        translationVisible: this.translationVisible,
+                        buttonVisibility: this.buttonManager?.button?.getVisibility(),
+                        translationFunctionality: this.buttonManager?.button?.isTranslationFunctional(),
+                        timestamp: Date.now()
+                    };
+                    sendResponse({ success: true, ...status });
+                    break;
+
+                case 'PING':
+                    console.log('🏓 收到 PING 訊息:', message);
+                    sendResponse({ 
+                        success: true, 
+                        pong: true,
+                        timestamp: Date.now(),
+                        requestTimestamp: message.timestamp,
+                        contentScriptReady: true
+                    });
+                    break;
+
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' });
             }
@@ -720,6 +765,71 @@ class WebTranslationContent {
         }
 
         console.log('✅ 所有翻譯內容已清除');
+    }
+
+    /**
+     * 處理翻譯按鈕可見性切換
+     */
+    handleButtonVisibilityToggle(visible) {
+        console.log('🔘 切換翻譯按鈕可見性:', visible);
+
+        if (this.buttonManager && this.buttonManager.button) {
+            // 獲取切換前的狀態
+            const beforeState = this.buttonManager.button.getVisibility();
+            console.log('切換前狀態:', beforeState);
+
+            // 執行切換
+            if (visible) {
+                this.buttonManager.button.show();
+                console.log('✅ 翻譯按鈕已顯示');
+            } else {
+                this.buttonManager.button.hide();
+                console.log('✅ 翻譯按鈕已隱藏');
+                console.log('ℹ️ 注意：隱藏按鈕不會影響翻譯功能的背景處理');
+            }
+
+            // 獲取切換後的狀態
+            setTimeout(() => {
+                const afterState = this.buttonManager.button.getVisibility();
+                console.log('切換後狀態:', afterState);
+            }, 350); // 等待動畫完成
+
+        } else {
+            console.log('⚠️ 翻譯按鈕管理器未初始化');
+        }
+    }
+
+    /**
+     * 載入按鈕可見性狀態
+     */
+    async loadButtonVisibilityState() {
+        try {
+            const result = await chrome.storage.local.get(['buttonVisibilityState']);
+            const isVisible = result.buttonVisibilityState !== undefined ? result.buttonVisibilityState : true;
+            
+            console.log('🔘 載入按鈕可見性狀態:', isVisible);
+            
+            // 設定按鈕可見性（跳過動畫以避免頁面載入時的閃爍）
+            if (this.buttonManager && this.buttonManager.button) {
+                this.buttonManager.button.setVisibility(isVisible, true);
+                console.log('✅ 按鈕可見性狀態已設定');
+            } else {
+                console.log('⚠️ 按鈕管理器尚未初始化，稍後重試');
+                // 延遲重試
+                setTimeout(() => {
+                    if (this.buttonManager && this.buttonManager.button) {
+                        this.buttonManager.button.setVisibility(isVisible, true);
+                        console.log('✅ 延遲設定按鈕可見性狀態成功');
+                    }
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('載入按鈕可見性狀態失敗:', error);
+            // 預設顯示按鈕
+            if (this.buttonManager && this.buttonManager.button) {
+                this.buttonManager.button.setVisibility(true, true);
+            }
+        }
     }
 
     /**

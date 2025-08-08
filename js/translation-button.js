@@ -309,16 +309,25 @@ class TranslationButton {
     
     /**
      * 隱藏按鈕
+     * 注意：隱藏按鈕不會影響翻譯功能的背景處理
      */
     hide() {
+        console.log('隱藏翻譯按鈕...');
+        
         if (this.container && this.isVisible) {
+            console.log('設定按鈕隱藏樣式...');
             this.container.style.opacity = '0';
             this.container.style.transform = 'scale(0.8)';
             
             setTimeout(() => {
                 this.container.style.display = 'none';
                 this.isVisible = false;
+                console.log('翻譯按鈕已隱藏');
             }, 300);
+        } else if (!this.container) {
+            console.error('按鈕容器不存在，無法隱藏');
+        } else if (!this.isVisible) {
+            console.log('按鈕已經隱藏，跳過隱藏');
         }
     }
     
@@ -331,6 +340,68 @@ class TranslationButton {
         } else {
             this.show();
         }
+    }
+
+    /**
+     * 獲取按鈕可見性狀態
+     */
+    getVisibility() {
+        return {
+            isVisible: this.isVisible,
+            containerExists: !!this.container,
+            displayStyle: this.container ? this.container.style.display : null,
+            opacity: this.container ? this.container.style.opacity : null
+        };
+    }
+
+    /**
+     * 強制設定按鈕可見性（用於狀態恢復）
+     */
+    setVisibility(visible, skipAnimation = false) {
+        console.log('強制設定按鈕可見性:', visible);
+        
+        if (!this.container) {
+            console.error('按鈕容器不存在，無法設定可見性');
+            return;
+        }
+
+        if (visible) {
+            if (skipAnimation) {
+                this.container.style.display = 'block';
+                this.container.style.opacity = '1';
+                this.container.style.transform = 'scale(1)';
+                this.isVisible = true;
+                console.log('按鈕可見性已設定為顯示（無動畫）');
+            } else {
+                this.show();
+            }
+        } else {
+            if (skipAnimation) {
+                this.container.style.display = 'none';
+                this.container.style.opacity = '0';
+                this.container.style.transform = 'scale(0.8)';
+                this.isVisible = false;
+                console.log('按鈕可見性已設定為隱藏（無動畫）');
+            } else {
+                this.hide();
+            }
+        }
+    }
+
+    /**
+     * 檢查翻譯功能是否正常運行（不依賴按鈕可見性）
+     */
+    isTranslationFunctional() {
+        return {
+            hasContainer: !!this.container,
+            hasButton: !!this.button,
+            currentState: this.currentState,
+            canStartTranslation: this.currentState === 'idle',
+            canToggleVisibility: this.currentState === 'completed',
+            canRetry: this.currentState === 'error',
+            isVisible: this.isVisible,
+            functionalityNote: '翻譯功能不依賴按鈕可見性，隱藏按鈕不會影響翻譯處理'
+        };
     }
     
     /**

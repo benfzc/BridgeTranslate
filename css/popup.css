@@ -109,8 +109,88 @@ body {
     100% { transform: rotate(360deg); }
 }
 
+.communication-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #6c757d;
+    margin-top: 8px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #28a745;
+}
+
+.status-indicator.disconnected {
+    background-color: #dc3545;
+}
+
+.status-indicator.warning {
+    background-color: #ffc107;
+}
+
 .hidden {
     display: none !important;
+}
+
+.button-visibility-section {
+    border-top: 1px solid #dee2e6;
+    padding-top: 12px;
+}
+
+.toggle-container {
+    display: flex;
+    justify-content: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #495057;
+}
+
+.toggle-checkbox {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    background-color: #ccc;
+    border-radius: 20px;
+    transition: background-color 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+    background-color: #007bff;
+}
+
+.toggle-checkbox:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
+.toggle-text {
+    user-select: none;
 }
 
 .footer {
@@ -118,4 +198,5 @@ body {
     justify-content: center;
     border-top: 1px solid #dee2e6;
     padding-top: 12px;
+    margin-top: 12px;
 }
