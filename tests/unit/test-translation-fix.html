@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-content {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .debug-info {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Translation Fix Test</h1>
+    
+    <div class="debug-info">
+        <div>測試狀態: <span id="test-status">準備中...</span></div>
+        <div>翻譯進度: <span id="translation-progress">0/0</span></div>
+        <div>錯誤計數: <span id="error-count">0</span></div>
+    </div>
+    
+    <button onclick="startTranslationTest()">開始翻譯測試</button>
+    <button onclick="clearTranslations()">清除翻譯</button>
+    <button onclick="showDebugInfo()">顯示調試信息</button>
+    
+    <div class="test-content">
+        <h2>Test Title</h2>
+        <p>This is a test paragraph for translation testing.</p>
+        <p>Another paragraph with different content to verify the translation system works correctly.</p>
+        <ul>
+            <li>First list item</li>
+            <li>Second list item</li>
+            <li>Third list item</li>
+        </ul>
+    </div>
+    
+    <div id="debug-output" class="debug-info" style="display: none;">
+        <h3>調試輸出:</h3>
+        <pre id="debug-text"></pre>
+    </div>
+
+    <!-- 載入必要的腳本 -->
+    <script src="js/models.js"></script>
+    <script src="js/content-analyzer.js"></script>
+    <script src="js/debug-helper.js"></script>
+    <script src="js/translation-renderer.js"></script>
+    <script src="js/rate-limited-queue.js"></script>
+    <script src="js/smart-translation-scheduler.js"></script>
+    <script src="js/button-manager.js"></script>
+    <script src="js/translation-button.js"></script>
+    <script src="js/content.js"></script>
+
+    <script>
+        // 測試變數
+        let testStatus = '準備中';
+        let translationProgress = { current: 0, total: 0 };
+        let errorCount = 0;
+        let debugInfo = [];
+        
+        // 更新狀態顯示
+        function updateStatus() {
+            document.getElementById('test-status').textContent = testStatus;
+            document.getElementById('translation-progress').textContent = `${translationProgress.current}/${translationProgress.total}`;
+            document.getElementById('error-count').textContent = errorCount;
+        }
+        
+        // 記錄調試信息
+        function logDebug(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                debugInfo.push(`${logEntry}\n${JSON.stringify(data, null, 2)}`);
+            } else {
+                debugInfo.push(logEntry);
+            }
+            console.log(logEntry, data);
+        }
+        
+        // 開始翻譯測試
+        async function startTranslationTest() {
+            try {
+                testStatus = '初始化中...';
+                updateStatus();
+                
+                logDebug('開始翻譯測試');
+                
+                // 檢查組件是否已載入
+                if (!window.webTranslationContent) {
+                    logDebug('等待 WebTranslationContent 初始化...');
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (window.webTranslationContent) {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                }
+                
+                testStatus = '開始翻譯...';
+                updateStatus();
+                
+                // 監聽翻譯進度
+                const originalProgressHandler = window.webTranslationContent.onTranslationProgress;
+                window.webTranslationContent.onTranslationProgress = function(current, total) {
+                    translationProgress = { current, total };
+                    updateStatus();
+                    logDebug(`翻譯進度: ${current}/${total}`);
+                    if (originalProgressHandler) {
+                        originalProgressHandler.call(this, current, total);
+                    }
+                };
+                
+                // 開始翻譯
+                await window.webTranslationContent.translatePage();
+                
+                testStatus = '翻譯完成';
+                updateStatus();
+                logDebug('翻譯測試完成');
+                
+            } catch (error) {
+                errorCount++;
+                testStatus = '測試失敗';
+                updateStatus();
+                logDebug('翻譯測試失敗', { error: error.message, stack: error.stack });
+            }
+        }
+        
+        // 清除翻譯
+        function clearTranslations() {
+            if (window.webTranslationContent && window.webTranslationContent.translationRenderer) {
+                window.webTranslationContent.translationRenderer.removeAllTranslations();
+                testStatus = '翻譯已清除';
+                translationProgress = { current: 0, total: 0 };
+                updateStatus();
+                logDebug('翻譯已清除');
+            }
+        }
+        
+        // 顯示調試信息
+        function showDebugInfo() {
+            const debugOutput = document.getElementById('debug-output');
+            const debugText = document.getElementById('debug-text');
+            
+            debugText.textContent = debugInfo.join('\n\n');
+            debugOutput.style.display = debugOutput.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 錯誤處理
+        window.addEventListener('error', function(event) {
+            errorCount++;
+            updateStatus();
+            logDebug('JavaScript 錯誤', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error
+            });
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            logDebug('頁面載入完成');
+            updateStatus();
+        });
+        
+        // 定期更新狀態
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

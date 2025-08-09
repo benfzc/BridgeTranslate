@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+        
+        .web-translation-result {
+            color: #666;
+            font-style: italic;
+            margin-top: 8px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            border-radius: 3px;
+        }
+        
+        .console-output {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Extension Integration Test Page</h1>
+    
+    <div class="test-info">
+        <h3>🧪 測試說明</h3>
+        <p>這個頁面用於測試瀏覽器擴展的段落翻譯功能整合。</p>
+        <p><strong>使用方法：</strong></p>
+        <ol>
+            <li>確保已安裝並啟用 Bilingual Bridge 擴展</li>
+            <li>點擊頁面右上角的翻譯按鈕（🌐）</li>
+            <li>觀察段落是否被正確翻譯</li>
+            <li>檢查控制台輸出以查看詳細日誌</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h3>HTML標籤處理測試</h3>
+        <p>This paragraph contains <strong>bold text</strong>, <em>italic text</em>, <code>inline code</code>, and <a href="#">links</a>. The paragraph translator should extract pure text and translate it as a single unit.</p>
+        
+        <p>By consulting the <tt class="docutils literal">/proc/acpi/wakeup</tt> file, I can see that the device <tt class="docutils literal">0000:00:14.0</tt> is the XHCI (USB controller), which is enabled to wake up the system.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>不同元素類型測試</h3>
+        <h2>This is a heading that should be translated with high priority</h2>
+        
+        <div>This div element should be processed as a paragraph unit by the translation system.</div>
+        
+        <blockquote>
+            "The future belongs to those who believe in the beauty of their dreams." - Eleanor Roosevelt
+        </blockquote>
+    </div>
+    
+    <div class="test-section">
+        <h3>列表項目測試</h3>
+        <ul>
+            <li>First list item with meaningful content for translation</li>
+            <li>Second list item containing <mark>highlighted text</mark> and formatting</li>
+            <li>Third list item to test batch processing capabilities</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h3>長段落分割測試</h3>
+        <p>This is an intentionally long paragraph designed to test the paragraph splitting functionality of the translation system. It contains multiple sentences that should be processed together as a single unit when possible, but if the paragraph becomes too long for API limits, it should be intelligently split into smaller segments while maintaining coherence. The paragraph translator should handle this gracefully by splitting at sentence boundaries when possible, ensuring that the translation maintains meaning and context across all segments while providing efficient translation processing.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>應該跳過的內容</h3>
+        <p>123456789</p>
+        <p>!@#$%^&*()</p>
+        <p>Short</p>
+        <p style="display: none;">Hidden content</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>技術內容測試</h3>
+        <p>The system uses advanced algorithms to process natural language text. It can handle various programming languages including JavaScript, Python, and C++. The API endpoints are configured to handle requests at <code>https://api.example.com/v1/translate</code> with proper authentication headers.</p>
+        
+        <p>Configuration files are typically stored in <tt>/etc/config/</tt> directory, and log files can be found at <tt>/var/log/application.log</tt>. The system supports both IPv4 and IPv6 addresses like <tt>192.168.1.1</tt> and <tt>2001:db8::1</tt>.</p>
+    </div>
+    
+    <div id="console-output" class="console-output">
+        <strong>Console Output:</strong><br>
+        (Open browser developer tools to see detailed logs)
+    </div>
+
+    <script>
+        // 監聽控制台輸出並顯示在頁面上
+        const originalLog = console.log;
+        const originalError = console.error;
+        const outputDiv = document.getElementById('console-output');
+        
+        function addToOutput(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            outputDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToOutput(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToOutput(args.join(' '), 'error');
+        };
+        
+        // 頁面載入完成後的檢查
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Extension Integration Test Page loaded');
+            
+            // 檢查擴展是否已載入
+            setTimeout(() => {
+                if (window.webTranslationContent) {
+                    console.log('✅ Web Translation Extension detected');
+                    console.log('Translation mode:', window.webTranslationContent.translationMode);
+                    
+                    // 檢查段落翻譯器是否可用
+                    if (window.webTranslationContent.paragraphTranslator) {
+                        console.log('✅ Paragraph Translator available');
+                    } else {
+                        console.log('❌ Paragraph Translator not available');
+                    }
+                    
+                    // 檢查智能排程器是否可用
+                    if (window.webTranslationContent.smartScheduler) {
+                        console.log('✅ Smart Scheduler available');
+                    } else {
+                        console.log('❌ Smart Scheduler not available');
+                    }
+                    
+                } else {
+                    console.log('❌ Web Translation Extension not detected');
+                    console.log('Please make sure the extension is installed and enabled');
+                }
+            }, 1000);
+        });
+        
+        // 監聽翻譯按鈕點擊
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('.translation-button')) {
+                console.log('🔄 Translation button clicked');
+            }
+        });
+        
+        // 監聽翻譯結果插入
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === Node.ELEMENT_NODE && 
+                        node.classList && 
+                        node.classList.contains('web-translation-result')) {
+                        console.log('✅ Translation result added:', node.textContent.substring(0, 50) + '...');
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    </script>
+</body>
+</html>

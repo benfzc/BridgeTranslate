@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>段落翻譯整合測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-controls {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .test-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        
+        .status-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        
+        .web-translation-result {
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            border-radius: 3px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>段落翻譯整合測試</h1>
+    
+    <div class="test-controls">
+        <button class="btn-primary" onclick="testParagraphTranslation()">段落翻譯測試</button>
+        <button class="btn-success" onclick="testContentAnalyzer()">內容分析測試</button>
+        <button class="btn-info" onclick="compareTranslationMethods()">對比翻譯方法</button>
+        <button class="btn-warning" onclick="testPerformance()">性能測試</button>
+        <button class="btn-danger" onclick="clearAllTranslations()">清除所有翻譯</button>
+    </div>
+    
+    <div id="status-display" class="status-display">
+        準備就緒 - 點擊按鈕開始測試
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例1：複雜HTML結構段落</h3>
+        <p>This paragraph contains <strong>bold text</strong>, <em>italic text</em>, <code>inline code</code>, and <a href="#">links</a>. The paragraph translator should extract the pure text: "This paragraph contains bold text, italic text, inline code, and links." and translate it as a single unit.</p>
+        
+        <div>This is a div element that contains <tt class="docutils literal">/proc/acpi/wakeup</tt> file references and <tt class="docutils literal">0000:00:14.0</tt> device identifiers. The system should handle these technical terms appropriately.</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例2：不同優先級的內容</h3>
+        <h2>High Priority Heading</h2>
+        <p>This is a medium priority paragraph that should be translated after the heading above.</p>
+        <span>This is a low priority span element that should be translated last.</span>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例3：列表和引用</h3>
+        <ul>
+            <li>First list item with meaningful content for translation</li>
+            <li>Second list item containing <mark>highlighted text</mark> and other formatting</li>
+            <li>Third list item to test batch processing capabilities</li>
+        </ul>
+        
+        <blockquote>
+            "The best way to predict the future is to invent it." This quote by Alan Kay demonstrates the importance of innovation and forward-thinking in technology development.
+        </blockquote>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例4：長段落分割</h3>
+        <p>This is an intentionally long paragraph designed to test the paragraph splitting functionality of the translation system. It contains multiple sentences that should be processed together as a single unit when possible, but if the paragraph becomes too long for the API limits, it should be intelligently split into smaller segments while maintaining coherence. The paragraph translator should handle this gracefully by splitting at sentence boundaries when possible, ensuring that the translation maintains meaning and context across all segments while providing efficient translation processing. This approach should result in better translation quality compared to sentence-by-sentence translation while still respecting API limitations and providing cost-effective translation services.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例5：應該跳過的內容</h3>
+        <p>123456789</p>
+        <p>!@#$%^&*()</p>
+        <p>Short</p>
+        <p style="display: none;">Hidden paragraph</p>
+        <p>這是中文內容，應該被跳過</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>效率對比表</h3>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>翻譯方法</th>
+                    <th>API請求數</th>
+                    <th>處理時間</th>
+                    <th>翻譯品質</th>
+                    <th>成本效益</th>
+                </tr>
+            </thead>
+            <tbody id="comparison-results">
+                <tr>
+                    <td>逐句翻譯</td>
+                    <td id="sentence-requests">-</td>
+                    <td id="sentence-time">-</td>
+                    <td>中等</td>
+                    <td>低</td>
+                </tr>
+                <tr>
+                    <td>段落翻譯</td>
+                    <td id="paragraph-requests">-</td>
+                    <td id="paragraph-time">-</td>
+                    <td>高</td>
+                    <td class="highlight">高</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 載入必要的腳本 -->
+    <script src="js/models.js"></script>
+    <script src="js/content-analyzer.js"></script>
+    <script src="js/paragraph-translator.js"></script>
+    
+    <script>
+        // 模擬API管理器
+        class MockAPIManager {
+            constructor() {
+                this.requestCount = 0;
+                this.totalTime = 0;
+            }
+            
+            async translate(text) {
+                this.requestCount++;
+                const startTime = Date.now();
+                
+                // 模擬API延遲（根據文本長度調整）
+                const delay = Math.min(1000, 200 + text.length * 2);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                
+                this.totalTime += Date.now() - startTime;
+                
+                // 簡單的模擬翻譯
+                return `[翻譯${this.requestCount}] ${text}`;
+            }
+            
+            getStats() {
+                return {
+                    requests: this.requestCount,
+                    totalTime: this.totalTime,
+                    avgTime: this.requestCount > 0 ? this.totalTime / this.requestCount : 0
+                };
+            }
+            
+            reset() {
+                this.requestCount = 0;
+                this.totalTime = 0;
+            }
+        }
+        
+        // 初始化組件
+        const mockApiManager = new MockAPIManager();
+        const contentAnalyzer = new ContentAnalyzer();
+        const paragraphTranslator = new ParagraphTranslator({
+            apiManager: mockApiManager,
+            maxParagraphLength: 800, // 降低長度限制以便測試分割功能
+            minParagraphLength: 5
+        });
+        
+        // 更新狀態顯示
+        function updateStatus(message) {
+            const statusDisplay = document.getElementById('status-display');
+            statusDisplay.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+        }
+        
+        // 測試段落翻譯功能
+        async function testParagraphTranslation() {
+            updateStatus('開始段落翻譯測試...');
+            
+            try {
+                mockApiManager.reset();
+                const startTime = Date.now();
+                
+                const results = await paragraphTranslator.translateAllParagraphs();
+                
+                const endTime = Date.now();
+                const stats = paragraphTranslator.getStats();
+                const apiStats = mockApiManager.getStats();
+                
+                updateStatus(`段落翻譯完成！處理了 ${results.length} 個段落，${stats.efficiency}`);
+                
+                // 更新對比表
+                document.getElementById('paragraph-requests').textContent = apiStats.requests;
+                document.getElementById('paragraph-time').textContent = `${endTime - startTime}ms`;
+                
+                console.log('段落翻譯統計:', stats);
+                console.log('API統計:', apiStats);
+                
+            } catch (error) {
+                console.error('段落翻譯測試失敗:', error);
+                updateStatus(`段落翻譯測試失敗: ${error.message}`);
+            }
+        }
+        
+        // 測試內容分析器
+        async function testContentAnalyzer() {
+            updateStatus('開始內容分析測試...');
+            
+            try {
+                // 測試段落元素檢測
+                const paragraphElements = contentAnalyzer.detectParagraphElements();
+                console.log('檢測到的段落元素:', paragraphElements);
+                
+                // 測試傳統文本節點檢測
+                const textSegments = contentAnalyzer.analyzePageContent();
+                console.log('檢測到的文本段落:', textSegments);
+                
+                const analysisStats = contentAnalyzer.getAnalysisStats(textSegments);
+                console.log('分析統計:', analysisStats);
+                
+                updateStatus(`內容分析完成！段落元素: ${paragraphElements.length}，文本段落: ${textSegments.length}`);
+                
+            } catch (error) {
+                console.error('內容分析測試失敗:', error);
+                updateStatus(`內容分析測試失敗: ${error.message}`);
+            }
+        }
+        
+        // 對比翻譯方法
+        async function compareTranslationMethods() {
+            updateStatus('開始對比翻譯方法...');
+            
+            try {
+                // 清除現有翻譯
+                clearAllTranslations();
+                
+                // 模擬逐句翻譯統計
+                const textSegments = contentAnalyzer.analyzePageContent();
+                const sentenceCount = textSegments.length;
+                const estimatedSentenceTime = sentenceCount * 600; // 假設每句600ms
+                
+                // 更新逐句翻譯統計
+                document.getElementById('sentence-requests').textContent = sentenceCount;
+                document.getElementById('sentence-time').textContent = `${estimatedSentenceTime}ms (估算)`;
+                
+                updateStatus(`對比完成！逐句翻譯需要 ${sentenceCount} 個請求，段落翻譯可能只需要更少的請求`);
+                
+            } catch (error) {
+                console.error('對比測試失敗:', error);
+                updateStatus(`對比測試失敗: ${error.message}`);
+            }
+        }
+        
+        // 性能測試
+        async function testPerformance() {
+            updateStatus('開始性能測試...');
+            
+            try {
+                const iterations = 3;
+                const results = [];
+                
+                for (let i = 0; i < iterations; i++) {
+                    clearAllTranslations();
+                    mockApiManager.reset();
+                    
+                    const startTime = performance.now();
+                    await paragraphTranslator.translateAllParagraphs();
+                    const endTime = performance.now();
+                    
+                    const stats = mockApiManager.getStats();
+                    results.push({
+                        iteration: i + 1,
+                        time: endTime - startTime,
+                        requests: stats.requests
+                    });
+                    
+                    updateStatus(`性能測試 ${i + 1}/${iterations} 完成`);
+                }
+                
+                const avgTime = results.reduce((sum, r) => sum + r.time, 0) / results.length;
+                const avgRequests = results.reduce((sum, r) => sum + r.requests, 0) / results.length;
+                
+                updateStatus(`性能測試完成！平均時間: ${avgTime.toFixed(2)}ms，平均請求數: ${avgRequests.toFixed(1)}`);
+                
+                console.log('性能測試結果:', results);
+                
+            } catch (error) {
+                console.error('性能測試失敗:', error);
+                updateStatus(`性能測試失敗: ${error.message}`);
+            }
+        }
+        
+        // 清除所有翻譯
+        function clearAllTranslations() {
+            paragraphTranslator.removeAllTranslations();
+            mockApiManager.reset();
+            updateStatus('已清除所有翻譯結果');
+        }
+        
+        // 頁面載入完成後的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('段落翻譯整合測試頁面已載入');
+            console.log('組件初始化完成:', {
+                contentAnalyzer,
+                paragraphTranslator,
+                mockApiManager
+            });
+        });
+    </script>
+</body>
+</html>

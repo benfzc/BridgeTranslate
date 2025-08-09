@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>段落翻譯測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-controls {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .test-controls button {
+            margin: 5px;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .translate-btn {
+            background: #007bff;
+            color: white;
+        }
+        
+        .clear-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .stats-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .test-content {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .web-translation-result {
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            border-radius: 3px;
+        }
+        
+        .stats-display {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>段落翻譯功能測試</h1>
+    
+    <div class="test-controls">
+        <button class="translate-btn" onclick="testTranslation()">開始翻譯測試</button>
+        <button class="clear-btn" onclick="clearTranslations()">清除翻譯</button>
+        <button class="stats-btn" onclick="showStats()">顯示統計</button>
+        <div id="stats-display" class="stats-display" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例1：包含內聯HTML標籤的段落</h3>
+        <p>By consulting the <tt class="docutils literal">/proc/acpi/wakeup</tt> file, I can see that the device <tt class="docutils literal">0000:00:14.0</tt> is the XHCI (USB controller), which is enabled to wake up the system.</p>
+        
+        <p>This paragraph contains <strong>bold text</strong>, <em>italic text</em>, and <code>inline code</code> elements that should be handled properly by the paragraph translator.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例2：不同類型的段落元素</h3>
+        <h2>This is a heading that should be translated</h2>
+        
+        <div>This is a div element containing some text that needs translation. It demonstrates how the paragraph translator handles different HTML elements.</div>
+        
+        <blockquote>This is a blockquote element. "The best way to predict the future is to invent it." - Alan Kay</blockquote>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例3：列表項目</h3>
+        <ul>
+            <li>First list item with some meaningful content to translate</li>
+            <li>Second list item that contains <span>nested elements</span> and should still work</li>
+            <li>Third list item to test multiple paragraph processing</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例4：長段落分割測試</h3>
+        <p>This is a very long paragraph that is designed to test the paragraph splitting functionality. It contains multiple sentences that should be processed together as a single unit, but if the paragraph becomes too long, it should be intelligently split into smaller segments. The paragraph translator should handle this gracefully by splitting at sentence boundaries when possible. This ensures that the translation maintains coherence while staying within API limits. The system should preserve the meaning and context across all segments while providing efficient translation processing.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例5：應該跳過的內容</h3>
+        <p>123456</p>
+        <p>!@#$%^</p>
+        <p>Short</p>
+        <p></p>
+    </div>
+    
+    <div class="test-section">
+        <h3>測試案例6：複雜HTML結構</h3>
+        <article>
+            <p>This is an article paragraph that contains <a href="#">links</a>, <mark>highlighted text</mark>, and other <sub>subscript</sub> and <sup>superscript</sup> elements.</p>
+        </article>
+        
+        <section>
+            <figcaption>This is a figure caption that should also be translated properly.</figcaption>
+        </section>
+    </div>
+
+    <!-- 載入必要的腳本 -->
+    <script src="js/paragraph-translator.js"></script>
+    <script>
+        // 模擬API管理器
+        class MockAPIManager {
+            async translate(text) {
+                // 模擬API延遲
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 簡單的模擬翻譯（在實際應用中會調用真實的翻譯API）
+                return `[翻譯] ${text}`;
+            }
+        }
+        
+        // 初始化段落翻譯器
+        const mockApiManager = new MockAPIManager();
+        const paragraphTranslator = new ParagraphTranslator({
+            apiManager: mockApiManager,
+            maxParagraphLength: 500, // 降低長度限制以便測試分割功能
+            minParagraphLength: 5
+        });
+        
+        // 測試翻譯功能
+        async function testTranslation() {
+            const button = document.querySelector('.translate-btn');
+            button.disabled = true;
+            button.textContent = '翻譯中...';
+            
+            try {
+                console.log('開始段落翻譯測試...');
+                const results = await paragraphTranslator.translateAllParagraphs();
+                
+                console.log(`翻譯完成！處理了 ${results.length} 個段落`);
+                
+                button.textContent = '翻譯完成';
+                setTimeout(() => {
+                    button.textContent = '開始翻譯測試';
+                    button.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('翻譯測試失敗:', error);
+                button.textContent = '翻譯失敗';
+                button.disabled = false;
+            }
+        }
+        
+        // 清除翻譯結果
+        function clearTranslations() {
+            paragraphTranslator.removeAllTranslations();
+            console.log('已清除所有翻譯結果');
+        }
+        
+        // 顯示統計信息
+        function showStats() {
+            const stats = paragraphTranslator.getStats();
+            const statsDisplay = document.getElementById('stats-display');
+            
+            statsDisplay.innerHTML = `
+                <strong>翻譯統計:</strong><br>
+                處理段落數: ${stats.paragraphsProcessed}<br>
+                創建片段數: ${stats.segmentsCreated}<br>
+                節省API請求: ${stats.apiRequestsSaved}<br>
+                效率提升: ${stats.efficiency}
+            `;
+            
+            statsDisplay.style.display = 'block';
+            
+            console.log('翻譯統計:', stats);
+        }
+        
+        // 頁面載入完成後的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('段落翻譯測試頁面已載入');
+            console.log('段落翻譯器已初始化:', paragraphTranslator);
+        });
+    </script>
+</body>
+</html>

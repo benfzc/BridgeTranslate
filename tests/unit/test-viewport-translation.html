@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewport Translation Manager Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .content-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 200px;
+        }
+        
+        .translation-content {
+            display: block;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #007bff;
+            border-radius: 0 8px 8px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #495057;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+        
+        .translation-content.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .translation-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #6c757d;
+            font-style: italic;
+            padding: 8px 12px;
+            background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 50%, #e9ecef 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 4px 0;
+        }
+        
+        .translation-loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid #dee2e6;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .test-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .test-controls h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .test-controls button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .test-controls button:hover {
+            background: #0056b3;
+        }
+        
+        .test-controls button.active {
+            background: #28a745;
+        }
+        
+        .test-controls button.disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .stats-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .stats-item {
+            margin: 2px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .stats-item .label {
+            color: #666;
+        }
+        
+        .stats-item .value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .log-display {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .section-marker {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .content-section {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-controls">
+        <h3>Viewport Translation Test</h3>
+        
+        <button id="startBtn" onclick="startTranslation()">Start Translation</button>
+        <button id="stopBtn" onclick="stopTranslation()" class="disabled">Stop Translation</button>
+        <button onclick="toggleTranslation()">Toggle Translation</button>
+        <button onclick="clearTranslations()">Clear All Translations</button>
+        <button onclick="scrollToSection(5)">Scroll to Section 5</button>
+        <button onclick="scrollToSection(10)">Scroll to Section 10</button>
+        
+        <div class="stats-display" id="statsDisplay">
+            <div class="stats-item">
+                <span class="label">Status:</span>
+                <span class="value" id="statusValue">Stopped</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Queue Size:</span>
+                <span class="value" id="queueValue">0</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Translations:</span>
+                <span class="value" id="translationsValue">0</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Scroll Events:</span>
+                <span class="value" id="scrollEventsValue">0</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">API Requests:</span>
+                <span class="value" id="apiRequestsValue">0</span>
+            </div>
+            <div class="stats-item">
+                <span class="label">Avg Response:</span>
+                <span class="value" id="avgResponseValue">0ms</span>
+            </div>
+        </div>
+        
+        <div class="log-display" id="logDisplay"></div>
+    </div>
+
+    <!-- Generate test content -->
+    <div class="content-section">
+        <div class="section-marker">1</div>
+        <h1>Introduction to Machine Learning</h1>
+        <p>Machine learning is a subset of artificial intelligence that focuses on the development of algorithms and statistical models that enable computer systems to improve their performance on a specific task through experience.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">2</div>
+        <h2>Types of Machine Learning</h2>
+        <p>There are three main types of machine learning: supervised learning, unsupervised learning, and reinforcement learning. Each type has its own characteristics and applications in different domains.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">3</div>
+        <h2>Supervised Learning</h2>
+        <p>Supervised learning algorithms learn from labeled training data to make predictions or decisions. Common examples include classification and regression problems where the algorithm learns from input-output pairs.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">4</div>
+        <h2>Unsupervised Learning</h2>
+        <p>Unsupervised learning deals with finding hidden patterns in data without labeled examples. Clustering, dimensionality reduction, and association rule learning are common unsupervised learning techniques.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">5</div>
+        <h2>Reinforcement Learning</h2>
+        <p>Reinforcement learning is about taking suitable actions to maximize reward in a particular situation. It is employed by various software and machines to find the best possible behavior or path it should take in a specific situation.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">6</div>
+        <h2>Neural Networks</h2>
+        <p>Neural networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) that process information using a connectionist approach to computation.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">7</div>
+        <h2>Deep Learning</h2>
+        <p>Deep learning is a subset of machine learning that uses neural networks with multiple layers. These deep neural networks can learn complex patterns and representations from large amounts of data.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">8</div>
+        <h2>Applications of Machine Learning</h2>
+        <p>Machine learning has numerous applications across various industries including healthcare, finance, transportation, entertainment, and technology. From recommendation systems to autonomous vehicles, ML is transforming how we interact with technology.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">9</div>
+        <h2>Challenges in Machine Learning</h2>
+        <p>Despite its potential, machine learning faces several challenges including data quality issues, overfitting, interpretability, and ethical concerns. Addressing these challenges is crucial for the responsible development and deployment of ML systems.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">10</div>
+        <h2>Future of Machine Learning</h2>
+        <p>The future of machine learning looks promising with advances in quantum computing, edge computing, and automated machine learning. These developments will make ML more accessible and powerful for solving complex real-world problems.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">11</div>
+        <h2>Getting Started with Machine Learning</h2>
+        <p>To get started with machine learning, one should have a solid foundation in mathematics, statistics, and programming. Popular programming languages for ML include Python and R, with libraries like scikit-learn, TensorFlow, and PyTorch.</p>
+    </div>
+
+    <div class="content-section">
+        <div class="section-marker">12</div>
+        <h2>Conclusion</h2>
+        <p>Machine learning continues to evolve and shape our digital world. As we advance in this field, it's important to balance innovation with responsibility, ensuring that ML technologies benefit society while addressing potential risks and challenges.</p>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="js/translation-boundary-detector.js"></script>
+    <script src="js/translation-renderer.js"></script>
+    <script src="js/viewport-translation-manager.js"></script>
+    
+    <script>
+        let viewportManager = null;
+        let boundaryDetector = null;
+        let translationRenderer = null;
+        let statsInterval = null;
+
+        // Initialize components
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Initialize components
+                boundaryDetector = new TranslationBoundaryDetector();
+                translationRenderer = new TranslationRenderer();
+                viewportManager = new ViewportTranslationManager({
+                    scrollThrottle: 150,
+                    batchSize: 2,
+                    batchDelay: 300,
+                    maxConcurrentRequests: 1,
+                    preloadMargin: 150
+                });
+                
+                // Initialize viewport manager
+                await viewportManager.initialize({
+                    boundaryDetector: boundaryDetector,
+                    translationRenderer: translationRenderer,
+                    apiManager: null // Will use mock translations
+                });
+                
+                log('All components initialized successfully');
+                
+                // Start stats update interval
+                startStatsUpdate();
+                
+            } catch (error) {
+                log(`Initialization error: ${error.message}`);
+            }
+        });
+
+        function log(message) {
+            const logDisplay = document.getElementById('logDisplay');
+            const timestamp = new Date().toLocaleTimeString();
+            logDisplay.innerHTML += `[${timestamp}] ${message}\n`;
+            logDisplay.scrollTop = logDisplay.scrollHeight;
+            console.log(message);
+        }
+
+        function startTranslation() {
+            if (!viewportManager) {
+                log('ERROR: Viewport manager not initialized');
+                return;
+            }
+            
+            viewportManager.start();
+            log('Translation started');
+            
+            // Update button states
+            document.getElementById('startBtn').classList.add('disabled');
+            document.getElementById('stopBtn').classList.remove('disabled');
+        }
+
+        function stopTranslation() {
+            if (!viewportManager) {
+                log('ERROR: Viewport manager not initialized');
+                return;
+            }
+            
+            viewportManager.stop();
+            log('Translation stopped');
+            
+            // Update button states
+            document.getElementById('startBtn').classList.remove('disabled');
+            document.getElementById('stopBtn').classList.add('disabled');
+        }
+
+        function toggleTranslation() {
+            if (!viewportManager) {
+                log('ERROR: Viewport manager not initialized');
+                return;
+            }
+            
+            viewportManager.toggle();
+            log('Translation toggled');
+        }
+
+        function clearTranslations() {
+            if (!translationRenderer) {
+                log('ERROR: Translation renderer not initialized');
+                return;
+            }
+            
+            translationRenderer.removeAllTranslations();
+            
+            if (boundaryDetector) {
+                boundaryDetector.clearBoundaryCache();
+            }
+            
+            log('All translations cleared');
+        }
+
+        function scrollToSection(sectionNumber) {
+            const section = document.querySelector(`.content-section:nth-child(${sectionNumber + 1})`);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                log(`Scrolled to section ${sectionNumber}`);
+            }
+        }
+
+        function updateStats() {
+            if (!viewportManager) return;
+            
+            try {
+                const stats = viewportManager.getStats();
+                
+                document.getElementById('statusValue').textContent = stats.isActive ? 'Active' : 'Stopped';
+                document.getElementById('queueValue').textContent = stats.queueSize;
+                document.getElementById('translationsValue').textContent = stats.totalTranslations;
+                document.getElementById('scrollEventsValue').textContent = stats.totalScrollEvents;
+                document.getElementById('apiRequestsValue').textContent = stats.totalAPIRequests;
+                document.getElementById('avgResponseValue').textContent = Math.round(stats.averageResponseTime) + 'ms';
+                
+                // Update status color
+                const statusElement = document.getElementById('statusValue');
+                statusElement.style.color = stats.isActive ? '#28a745' : '#dc3545';
+                
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        function startStatsUpdate() {
+            if (statsInterval) {
+                clearInterval(statsInterval);
+            }
+            
+            statsInterval = setInterval(updateStats, 500);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (statsInterval) {
+                clearInterval(statsInterval);
+            }
+            
+            if (viewportManager) {
+                viewportManager.destroy();
+            }
+        });
+
+        // Add some visual feedback for scroll events
+        let scrollIndicator = null;
+        window.addEventListener('scroll', function() {
+            if (!scrollIndicator) {
+                scrollIndicator = document.createElement('div');
+                scrollIndicator.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 123, 255, 0.8);
+                    color: white;
+                    padding: 5px 15px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    z-index: 9999;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(scrollIndicator);
+            }
+            
+            scrollIndicator.textContent = 'Scrolling...';
+            scrollIndicator.style.opacity = '1';
+            
+            clearTimeout(scrollIndicator.timeout);
+            scrollIndicator.timeout = setTimeout(() => {
+                scrollIndicator.style.opacity = '0';
+            }, 500);
+        });
+    </script>
+</body>
+</html>

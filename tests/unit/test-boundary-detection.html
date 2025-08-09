@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Boundary Detection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .content-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .translation-content {
+            display: block;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid #007bff;
+            border-radius: 0 8px 8px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #495057;
+        }
+        
+        .test-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 250px;
+        }
+        
+        .test-controls button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .test-controls button:hover {
+            background: #0056b3;
+        }
+        
+        .test-results {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .highlight {
+            background-color: yellow !important;
+            border: 2px solid red !important;
+        }
+        
+        .viewport-indicator {
+            position: fixed;
+            left: 0;
+            right: 0;
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid red;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .boundary-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: green;
+            z-index: 998;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-controls">
+        <h3>Translation Boundary Test</h3>
+        <button onclick="testBoundaryDetection()">Test Boundary Detection</button>
+        <button onclick="testViewportRange()">Test Viewport Range</button>
+        <button onclick="testElementTranslated()">Test Element Translated</button>
+        <button onclick="testTranslationRange()">Test Translation Range</button>
+        <button onclick="addMockTranslation()">Add Mock Translation</button>
+        <button onclick="clearHighlights()">Clear Highlights</button>
+        <div class="test-results" id="testResults"></div>
+    </div>
+
+    <div class="content-section">
+        <h1>Test Article Title</h1>
+        <p>This is the first paragraph of our test article. It contains some English text that would normally be translated.</p>
+        
+        <!-- Mock translation for first paragraph -->
+        <div class="translation-content" data-segment-id="segment_1" data-translation-id="trans_1">
+            這是我們測試文章的第一段。它包含一些通常會被翻譯的英文文本。
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Second Section</h2>
+        <p>This is another paragraph that might be translated. It's longer than the first one and contains more detailed information about the topic we're discussing.</p>
+        
+        <!-- Mock translation for second paragraph -->
+        <div class="translation-content" data-segment-id="segment_2" data-translation-id="trans_2">
+            這是另一個可能被翻譯的段落。它比第一個更長，包含更多關於我們正在討論的主題的詳細信息。
+        </div>
+    </div>
+
+    <div class="content-section">
+        <h2>Third Section (Not Translated)</h2>
+        <p>This paragraph has not been translated yet. It should be detected as needing translation when we scroll down to it.</p>
+    </div>
+
+    <div class="content-section">
+        <h2>Fourth Section (Not Translated)</h2>
+        <p>Another untranslated paragraph. This one is even further down the page and should only be considered for translation when it comes into the viewport.</p>
+    </div>
+
+    <div class="content-section">
+        <h2>Fifth Section (Not Translated)</h2>
+        <p>The final test paragraph. This should help us test the boundary detection when scrolling through a longer document.</p>
+    </div>
+
+    <script src="js/translation-boundary-detector.js"></script>
+    <script>
+        let detector = null;
+        let viewportIndicator = null;
+        let boundaryIndicator = null;
+
+        // Initialize detector
+        document.addEventListener('DOMContentLoaded', function() {
+            detector = new TranslationBoundaryDetector();
+            log('Translation Boundary Detector initialized');
+        });
+
+        function log(message) {
+            const results = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            results.innerHTML += `[${timestamp}] ${message}\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function testBoundaryDetection() {
+            if (!detector) {
+                log('ERROR: Detector not initialized');
+                return;
+            }
+
+            const boundary = detector.findTranslationBoundary();
+            log(`Translation boundary: ${boundary}px`);
+            
+            if (boundary !== null) {
+                showBoundaryIndicator(boundary);
+            }
+        }
+
+        function testViewportRange() {
+            if (!detector) {
+                log('ERROR: Detector not initialized');
+                return;
+            }
+
+            const viewport = detector.getViewportRange();
+            log(`Viewport: ${viewport.top}px - ${viewport.bottom}px (height: ${viewport.height}px)`);
+            
+            showViewportIndicator(viewport);
+        }
+
+        function testElementTranslated() {
+            if (!detector) {
+                log('ERROR: Detector not initialized');
+                return;
+            }
+
+            const paragraphs = document.querySelectorAll('p');
+            paragraphs.forEach((p, index) => {
+                const isTranslated = detector.isElementTranslated(p);
+                log(`Paragraph ${index + 1}: ${isTranslated ? 'TRANSLATED' : 'NOT TRANSLATED'}`);
+                
+                if (isTranslated) {
+                    p.style.border = '2px solid green';
+                } else {
+                    p.style.border = '2px solid red';
+                }
+            });
+        }
+
+        function testTranslationRange() {
+            if (!detector) {
+                log('ERROR: Detector not initialized');
+                return;
+            }
+
+            const range = detector.getTranslationRange();
+            log(`Translation range: ${range.startY}px - ${range.endY}px`);
+            log(`Has existing translations: ${range.hasExistingTranslations}`);
+            log(`Range height: ${range.height}px`);
+            
+            // Find elements in this range
+            const elements = detector.findTextElementsInRange(range.startY, range.endY);
+            log(`Found ${elements.length} elements in translation range`);
+            
+            elements.forEach((item, index) => {
+                item.element.classList.add('highlight');
+                log(`Element ${index + 1}: "${item.text.substring(0, 50)}..."`);
+            });
+        }
+
+        function addMockTranslation() {
+            const untranslatedParagraphs = Array.from(document.querySelectorAll('p')).filter(p => 
+                !detector.isElementTranslated(p)
+            );
+            
+            if (untranslatedParagraphs.length === 0) {
+                log('No untranslated paragraphs found');
+                return;
+            }
+            
+            const targetP = untranslatedParagraphs[0];
+            const mockTranslation = document.createElement('div');
+            mockTranslation.className = 'translation-content';
+            mockTranslation.setAttribute('data-segment-id', `segment_${Date.now()}`);
+            mockTranslation.setAttribute('data-translation-id', `trans_${Date.now()}`);
+            mockTranslation.textContent = '這是一個模擬的翻譯內容。';
+            
+            targetP.parentNode.insertBefore(mockTranslation, targetP.nextSibling);
+            
+            log('Added mock translation');
+            detector.clearBoundaryCache(); // Clear cache to reflect new translation
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.classList.remove('highlight');
+            });
+            
+            document.querySelectorAll('p').forEach(p => {
+                p.style.border = '';
+            });
+            
+            if (viewportIndicator) {
+                viewportIndicator.remove();
+                viewportIndicator = null;
+            }
+            
+            if (boundaryIndicator) {
+                boundaryIndicator.remove();
+                boundaryIndicator = null;
+            }
+            
+            log('Cleared all highlights');
+        }
+
+        function showViewportIndicator(viewport) {
+            if (viewportIndicator) {
+                viewportIndicator.remove();
+            }
+            
+            viewportIndicator = document.createElement('div');
+            viewportIndicator.className = 'viewport-indicator';
+            viewportIndicator.style.top = (viewport.top - window.scrollY) + 'px';
+            viewportIndicator.style.height = viewport.height + 'px';
+            document.body.appendChild(viewportIndicator);
+            
+            setTimeout(() => {
+                if (viewportIndicator) {
+                    viewportIndicator.remove();
+                    viewportIndicator = null;
+                }
+            }, 3000);
+        }
+
+        function showBoundaryIndicator(boundary) {
+            if (boundaryIndicator) {
+                boundaryIndicator.remove();
+            }
+            
+            boundaryIndicator = document.createElement('div');
+            boundaryIndicator.className = 'boundary-indicator';
+            boundaryIndicator.style.top = boundary + 'px';
+            document.body.appendChild(boundaryIndicator);
+            
+            setTimeout(() => {
+                if (boundaryIndicator) {
+                    boundaryIndicator.remove();
+                    boundaryIndicator = null;
+                }
+            }, 5000);
+        }
+
+        // Auto-update viewport info on scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (detector) {
+                    const stats = detector.getDetectionStats();
+                    console.log('Scroll stats:', stats);
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate-Limited Queue 系統測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-controls {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-display {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .content-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rate-Limited Translation Queue 測試</h1>
+    
+    <div class="test-controls">
+        <h3>測試控制</h3>
+        <button id="testBasicQueue">測試基本隊列功能</button>
+        <button id="testRateLimit">測試速率限制</button>
+        <button id="testPriority">測試優先級排序</button>
+        <button id="clearQueue">清空隊列</button>
+        <button id="pauseQueue">暫停/恢復</button>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div id="progressText">準備就緒</div>
+    </div>
+    
+    <div class="status-display" id="statusDisplay">
+        隊列狀態將顯示在這裡...
+    </div>
+    
+    <div class="content-section">
+        <h2>Test Content Section 1</h2>
+        <p>This is a test paragraph that should be translated. It contains enough text to make the translation meaningful and test the queue system properly.</p>
+        <p>Another paragraph with different content to test multiple segments. This helps verify that the queue processes items in the correct order.</p>
+    </div>
+    
+    <div class="content-section">
+        <h2>Test Content Section 2</h2>
+        <p>More test content for translation. This section will help test the priority system and ensure that visible content gets translated first.</p>
+        <p>Final test paragraph to complete our test suite. The queue should handle all these segments efficiently while respecting API rate limits.</p>
+    </div>
+
+    <script src="js/models.js"></script>
+    <script src="js/rate-limited-queue.js"></script>
+    
+    <script>
+        // 測試用的翻譯隊列
+        let testQueue = null;
+        let isPaused = false;
+        
+        // 模擬 chrome.runtime.sendMessage
+        if (typeof chrome === 'undefined') {
+            window.chrome = {
+                runtime: {
+                    sendMessage: async (message) => {
+                        // 模擬翻譯 API 回應
+                        await new Promise(resolve => setTimeout(resolve, 500)); // 模擬網路延遲
+                        
+                        if (Math.random() < 0.1) {
+                            // 10% 機率模擬錯誤
+                            return { success: false, error: '模擬 API 錯誤' };
+                        }
+                        
+                        return {
+                            success: true,
+                            translation: `[翻譯] ${message.text.substring(0, 50)}...`
+                        };
+                    }
+                }
+            };
+        }
+        
+        // 初始化測試
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeQueue();
+            setupEventListeners();
+            updateStatus();
+        });
+        
+        function initializeQueue() {
+            testQueue = new RateLimitedTranslationQueue({
+                rpmLimit: 5, // 測試用較低限制
+                tpmLimit: 10000,
+                rpdLimit: 100
+            });
+            
+            // 設定回調函數
+            testQueue.onProgress = (progress) => {
+                updateProgress(progress);
+            };
+            
+            testQueue.onComplete = () => {
+                console.log('隊列處理完成！');
+                document.getElementById('progressText').textContent = '翻譯完成！';
+            };
+            
+            testQueue.onError = (error, segment) => {
+                console.error('翻譯錯誤:', error, segment);
+            };
+            
+            console.log('測試隊列初始化完成');
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('testBasicQueue').addEventListener('click', testBasicQueue);
+            document.getElementById('testRateLimit').addEventListener('click', testRateLimit);
+            document.getElementById('testPriority').addEventListener('click', testPriority);
+            document.getElementById('clearQueue').addEventListener('click', clearQueue);
+            document.getElementById('pauseQueue').addEventListener('click', togglePause);
+        }
+        
+        function testBasicQueue() {
+            console.log('測試基本隊列功能');
+            
+            // 創建測試段落
+            const testSegments = [
+                createTestSegment('This is the first test paragraph.', 1),
+                createTestSegment('This is the second test paragraph with more content.', 2),
+                createTestSegment('Third paragraph for comprehensive testing.', 3)
+            ];
+            
+            // 加入隊列
+            testSegments.forEach(segment => {
+                testQueue.enqueue(segment);
+            });
+            
+            // 開始處理
+            testQueue.startProcessing();
+        }
+        
+        function testRateLimit() {
+            console.log('測試速率限制');
+            
+            // 創建大量測試段落
+            const testSegments = [];
+            for (let i = 1; i <= 10; i++) {
+                testSegments.push(createTestSegment(`Rate limit test paragraph ${i}. This should be processed according to the RPM limit.`, i));
+            }
+            
+            // 加入隊列
+            testSegments.forEach(segment => {
+                testQueue.enqueue(segment);
+            });
+            
+            // 開始處理
+            testQueue.startProcessing();
+        }
+        
+        function testPriority() {
+            console.log('測試優先級排序');
+            
+            // 創建不同優先級的段落
+            const testSegments = [
+                createTestSegment('Low priority paragraph.', 1, 10),
+                createTestSegment('High priority paragraph.', 2, 100),
+                createTestSegment('Medium priority paragraph.', 3, 50),
+                createTestSegment('Another high priority paragraph.', 4, 90)
+            ];
+            
+            // 加入隊列
+            testSegments.forEach(segment => {
+                testQueue.enqueue(segment);
+            });
+            
+            // 開始處理
+            testQueue.startProcessing();
+        }
+        
+        function clearQueue() {
+            testQueue.clear();
+            updateStatus();
+            document.getElementById('progressText').textContent = '隊列已清空';
+            document.getElementById('progressFill').style.width = '0%';
+        }
+        
+        function togglePause() {
+            if (isPaused) {
+                testQueue.resume();
+                document.getElementById('pauseQueue').textContent = '暫停';
+                isPaused = false;
+            } else {
+                testQueue.pause();
+                document.getElementById('pauseQueue').textContent = '恢復';
+                isPaused = true;
+            }
+        }
+        
+        function createTestSegment(text, id, priority = 50) {
+            return {
+                id: `test_segment_${id}`,
+                text: text,
+                priority: priority,
+                element: document.createElement('div'), // 模擬 DOM 元素
+                type: 'paragraph',
+                isVisible: true
+            };
+        }
+        
+        function updateProgress(progress) {
+            const percentage = progress.percentage || 0;
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = 
+                `進度: ${progress.current}/${progress.total} (${percentage}%) - 隊列: ${progress.queueLength}`;
+            
+            updateStatus();
+        }
+        
+        function updateStatus() {
+            if (!testQueue) return;
+            
+            const status = testQueue.getStatus();
+            const statusHtml = `
+隊列狀態:
+- 隊列長度: ${status.queueLength}
+- 已處理: ${status.processedCount}
+- 正在處理: ${status.isProcessing ? '是' : '否'}
+- 當前項目: ${status.currentSegment ? status.currentSegment.text.substring(0, 30) + '...' : '無'}
+- 可發送請求: ${status.canSendRequest ? '是' : '否'}
+- 等待時間: ${Math.ceil(status.waitTime / 1000)}秒
+- 每日使用量: ${status.dailyUsage.requests}/${testQueue.rpdLimit} 請求
+            `.trim();
+            
+            document.getElementById('statusDisplay').textContent = statusHtml;
+        }
+        
+        // 定期更新狀態顯示
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

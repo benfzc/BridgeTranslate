@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated Smart Translation System Test</title>
+    <link rel="stylesheet" href="css/content.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .test-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-panel {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        .status-panel h4 {
+            margin: 0 0 10px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .content-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #28a745;
+            background: #f8fff9;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #ffc107;
+            background: #fffef8;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #6c757d;
+            background: #f8f9fa;
+        }
+        
+        .excluded-content {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .system-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .translation-demo {
+            border: 2px dashed #007bff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #f0f8ff;
+        }
+        
+        .viewport-indicator {
+            position: fixed;
+            top: 50%;
+            right: 10px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            writing-mode: vertical-rl;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewport-indicator">Viewport Center</div>
+    
+    <div class="test-header">
+        <h1>🧠 Integrated Smart Translation System</h1>
+        <p>Testing the complete integration of Rate-Limited Queue + Smart Scheduler + Content Analysis</p>
+    </div>
+    
+    <div class="system-info">
+        <strong>🔧 System Information:</strong><br>
+        Translation Mode: <span id="translationMode">Loading...</span><br>
+        API Limits: <span id="apiLimits">Loading...</span><br>
+        Components Status: <span id="componentsStatus">Loading...</span>
+    </div>
+    
+    <div class="test-controls">
+        <h3>🎮 Test Controls</h3>
+        
+        <div>
+            <button onclick="testTranslation()">🚀 Start Translation</button>
+            <button onclick="hideTranslations()">🙈 Hide Translations</button>
+            <button onclick="clearTranslations()">🧹 Clear All</button>
+            <button onclick="getStats()">📊 Get Stats</button>
+        </div>
+        
+        <div class="status-grid">
+            <div class="status-panel">
+                <h4>📊 Analysis Status</h4>
+                <div id="analysisStatus">Waiting...</div>
+            </div>
+            <div class="status-panel">
+                <h4>⚡ Queue Status</h4>
+                <div id="queueStatus">Waiting...</div>
+            </div>
+            <div class="status-panel">
+                <h4>🎯 Translation Status</h4>
+                <div id="translationStatus">Waiting...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excluded Content (Should be filtered out) -->
+    <div class="excluded-content ad">
+        <strong>🚫 Advertisement Content</strong><br>
+        This advertisement should be automatically excluded by the smart scheduler.
+    </div>
+
+    <!-- High Priority Content (In Viewport + Titles) -->
+    <div class="content-section priority-high">
+        <h1>🎯 High Priority: Main Article Title</h1>
+        <p>This is the main article content that should receive the highest priority in translation. It's currently visible in the viewport and contains the most important information that users need to see first.</p>
+        
+        <h2>📈 Important Subsection</h2>
+        <p>This subsection is also highly important and should be translated early in the process. The smart scheduler should recognize this as priority content due to its heading structure and position.</p>
+        
+        <div class="translation-demo">
+            <strong>💡 Translation Demo Area</strong><br>
+            Watch this space - translations should appear here as the system processes the content above.
+        </div>
+    </div>
+
+    <!-- Medium Priority Content -->
+    <div class="content-section priority-medium">
+        <h3>📝 Medium Priority: Supporting Content</h3>
+        <p>This content provides additional context and supporting information. While important, it should be translated after the high-priority content above. The smart scheduler should handle this appropriately based on its priority algorithm.</p>
+        
+        <ul>
+            <li>First supporting point with relevant details</li>
+            <li>Second point that adds value to the main content</li>
+            <li>Third point for comprehensive coverage</li>
+        </ul>
+        
+        <p>Additional paragraph with more supporting information. This helps test the system's ability to handle multiple content types and maintain proper prioritization throughout the translation process.</p>
+    </div>
+
+    <!-- Lower Priority Content (Below the fold) -->
+    <div class="content-section priority-low">
+        <h4>📚 Lower Priority: Detailed Information</h4>
+        <p>This content is below the fold and should have lower priority in the translation queue. However, it should still be processed after the more important content above is completed.</p>
+        
+        <p>This section contains detailed information that users might scroll down to read. The smart scheduler should recognize this as lower priority due to its position and process it accordingly in the translation queue.</p>
+        
+        <table border="1" style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr>
+                <th style="padding: 8px; background: #f8f9fa;">Feature</th>
+                <th style="padding: 8px; background: #f8f9fa;">Description</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px;">Smart Scheduling</td>
+                <td style="padding: 8px;">Automatically prioritizes content based on importance and visibility</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;">Rate Limiting</td>
+                <td style="padding: 8px;">Respects API limits to prevent quota exhaustion</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- More Test Content -->
+    <div class="content-section">
+        <h5>🔬 Additional Test Content</h5>
+        <p>More comprehensive test content to ensure the system can handle a reasonable amount of text. This paragraph should be processed according to its calculated priority and position in the document.</p>
+        
+        <blockquote style="border-left: 4px solid #007bff; padding-left: 15px; margin: 15px 0; font-style: italic;">
+            "The smart translation system should handle various content types including blockquotes, maintaining proper prioritization and processing order."
+        </blockquote>
+        
+        <p>Final test paragraph to complete our comprehensive test suite. The system should demonstrate its ability to handle all this content efficiently while respecting API rate limits and maintaining good user experience.</p>
+    </div>
+
+    <!-- Mixed Language Content (Should be filtered) -->
+    <div class="content-section" style="background: #fff3cd; border-color: #ffeaa7;">
+        <h6>🌍 Mixed Language Test</h6>
+        <p>這是中文內容，應該被智能過濾器排除。</p>
+        <p>This English content should be processed normally by the translation system.</p>
+        <p>Ceci est du contenu français qui devrait être filtré.</p>
+        <p>Another English paragraph that should be translated.</p>
+    </div>
+
+    <!-- Load all required scripts -->
+    <script src="js/models.js"></script>
+    <script src="js/content-analyzer.js"></script>
+    <script src="js/translation-renderer.js"></script>
+    <script src="js/translation-button.js"></script>
+    <script src="js/button-manager.js"></script>
+    <script src="js/rate-limited-queue.js"></script>
+    <script src="js/smart-translation-scheduler.js"></script>
+    <script src="js/content.js"></script>
+    
+    <script>
+        // Mock chrome.runtime.sendMessage for testing
+        if (typeof chrome === 'undefined') {
+            window.chrome = {
+                runtime: {
+                    sendMessage: async (message) => {
+                        // Simulate network delay
+                        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+                        
+                        // Simulate occasional errors (5% chance)
+                        if (Math.random() < 0.05) {
+                            return { success: false, error: 'Simulated API error' };
+                        }
+                        
+                        // Return mock translation
+                        return {
+                            success: true,
+                            translation: `[翻譯] ${message.text.substring(0, 80)}...`
+                        };
+                    }
+                },
+                storage: {
+                    sync: {
+                        get: async (keys) => {
+                            return {
+                                apiConfiguration: {
+                                    provider: 'google-gemini',
+                                    apiKey: 'test-api-key',
+                                    model: 'gemini-2.5-flash-lite'
+                                },
+                                translationPreferences: {
+                                    targetLanguage: 'zh-TW'
+                                }
+                            };
+                        }
+                    }
+                }
+            };
+        }
+        
+        // Test functions
+        function testTranslation() {
+            if (window.webTranslationContent) {
+                window.webTranslationContent.toggleTranslation();
+            } else {
+                console.error('WebTranslationContent not initialized');
+            }
+        }
+        
+        function hideTranslations() {
+            if (window.webTranslationContent) {
+                window.webTranslationContent.hideTranslations();
+            }
+        }
+        
+        function clearTranslations() {
+            if (window.webTranslationContent) {
+                window.webTranslationContent.clearAllTranslations();
+            }
+        }
+        
+        function getStats() {
+            if (window.webTranslationContent) {
+                const stats = window.webTranslationContent.getTranslationStats();
+                console.log('📊 Translation Stats:', stats);
+                alert('Stats logged to console');
+            }
+        }
+        
+        // Update system info
+        function updateSystemInfo() {
+            const content = window.webTranslationContent;
+            if (!content) return;
+            
+            document.getElementById('translationMode').textContent = content.translationMode || 'Unknown';
+            
+            if (content.translationQueue) {
+                const limits = `RPM: ${content.translationQueue.rpmLimit}, TPM: ${content.translationQueue.tpmLimit}`;
+                document.getElementById('apiLimits').textContent = limits;
+            }
+            
+            const components = [];
+            if (content.contentAnalyzer) components.push('ContentAnalyzer');
+            if (content.translationRenderer) components.push('TranslationRenderer');
+            if (content.translationQueue) components.push('TranslationQueue');
+            if (content.smartScheduler) components.push('SmartScheduler');
+            if (content.buttonManager) components.push('ButtonManager');
+            
+            document.getElementById('componentsStatus').textContent = components.join(', ');
+        }
+        
+        // Update status panels
+        function updateStatus() {
+            const content = window.webTranslationContent;
+            if (!content) return;
+            
+            // Analysis Status
+            if (content.smartScheduler) {
+                const schedulingStatus = content.smartScheduler.getSchedulingStatus();
+                const analysisHtml = `
+Analyzing: ${schedulingStatus.isAnalyzing ? 'Yes' : 'No'}
+Scheduling: ${schedulingStatus.isScheduling ? 'Yes' : 'No'}
+${schedulingStatus.analysisResults ? `
+Segments: ${schedulingStatus.analysisResults.totalSegments}
+Visible: ${schedulingStatus.analysisResults.visibleSegments}
+Titles: ${schedulingStatus.analysisResults.titleSegments}
+Important: ${schedulingStatus.analysisResults.importantSegments}
+` : ''}
+                `.trim();
+                document.getElementById('analysisStatus').innerHTML = analysisHtml.replace(/\n/g, '<br>');
+            }
+            
+            // Queue Status
+            if (content.translationQueue) {
+                const queueStatus = content.translationQueue.getStatus();
+                const queueHtml = `
+Queue: ${queueStatus.queueLength}
+Processed: ${queueStatus.processedCount}
+Processing: ${queueStatus.isProcessing ? 'Yes' : 'No'}
+Can Send: ${queueStatus.canSendRequest ? 'Yes' : 'No'}
+Wait Time: ${Math.ceil(queueStatus.waitTime / 1000)}s
+Daily: ${queueStatus.dailyUsage.requests}
+                `.trim();
+                document.getElementById('queueStatus').innerHTML = queueHtml.replace(/\n/g, '<br>');
+            }
+            
+            // Translation Status
+            const translationHtml = `
+Mode: ${content.translationMode}
+Visible: ${content.translationVisible ? 'Yes' : 'No'}
+Translating: ${content.isTranslating ? 'Yes' : 'No'}
+            `.trim();
+            document.getElementById('translationStatus').innerHTML = translationHtml.replace(/\n/g, '<br>');
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Test page loaded, waiting for WebTranslationContent...');
+            
+            // Wait for WebTranslationContent to initialize
+            const checkInit = setInterval(() => {
+                if (window.webTranslationContent) {
+                    console.log('✅ WebTranslationContent initialized');
+                    updateSystemInfo();
+                    clearInterval(checkInit);
+                }
+            }, 100);
+            
+            // Update status every 2 seconds
+            setInterval(updateStatus, 2000);
+        });
+    </script>
+</body>
+</html>

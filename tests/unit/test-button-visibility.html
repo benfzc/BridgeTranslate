@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試按鈕隱藏功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .test-content {
+            background-color: #fff;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>測試翻譯按鈕隱藏功能</h1>
+    
+    <div class="instructions">
+        <h2>測試步驟：</h2>
+        <ol>
+            <li>點擊瀏覽器工具列的擴展圖示打開 popup</li>
+            <li>檢查「顯示翻譯按鈕」開關是否正常顯示</li>
+            <li>嘗試切換開關狀態</li>
+            <li>觀察頁面上的翻譯按鈕是否相應隱藏/顯示</li>
+            <li>重新載入頁面，檢查狀態是否持久化</li>
+            <li>在新分頁中測試狀態同步</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>測試內容區域 1</h2>
+        <div class="test-content">
+            <p>This is a test paragraph for translation. The translation button should appear near this text when the extension is active.</p>
+            <p>You can use this content to test the button visibility toggle functionality.</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>測試內容區域 2</h2>
+        <div class="test-content">
+            <p>Another test paragraph to verify that all translation buttons are affected by the visibility toggle.</p>
+            <p>When you toggle the button visibility in the popup, all translation buttons on this page should hide or show accordingly.</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>測試內容區域 3</h2>
+        <div class="test-content">
+            <p>This section contains more English text that should trigger translation buttons when the extension is active.</p>
+            <p>The button visibility state should persist across page reloads and be synchronized across all tabs.</p>
+        </div>
+    </div>
+
+    <script>
+        // 簡單的測試腳本來監控狀態變化
+        console.log('Button visibility test page loaded');
+        
+        // 監聽來自擴展的訊息
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if (message.type === 'TOGGLE_BUTTON_VISIBILITY') {
+                    console.log('Button visibility changed:', message.visible);
+                    
+                    // 在頁面上顯示狀態變化
+                    const statusDiv = document.getElementById('status') || document.createElement('div');
+                    statusDiv.id = 'status';
+                    statusDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; background: #007bff; color: white; padding: 10px; border-radius: 5px; z-index: 10000;';
+                    statusDiv.textContent = `翻譯按鈕: ${message.visible ? '顯示' : '隱藏'}`;
+                    
+                    if (!document.getElementById('status')) {
+                        document.body.appendChild(statusDiv);
+                    }
+                    
+                    // 3秒後移除狀態顯示
+                    setTimeout(() => {
+                        if (statusDiv.parentNode) {
+                            statusDiv.parentNode.removeChild(statusDiv);
+                        }
+                    }, 3000);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
