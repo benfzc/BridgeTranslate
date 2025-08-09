@@ -208,18 +208,37 @@ class HybridBackgroundService {
 
     async initialize() {
         try {
+            console.log('🚀 開始初始化混合背景服務...');
+            
+            // 載入設定
             this.settings = await this.getSettings();
+            console.log('📋 設定載入完成:', {
+                provider: this.settings.apiConfiguration?.provider,
+                hasApiKey: !!this.settings.apiConfiguration?.apiKey,
+                apiKeyLength: this.settings.apiConfiguration?.apiKey?.length || 0
+            });
             
             // 如果有API配置，創建API客戶端
             if (this.settings.apiConfiguration?.provider === 'google-gemini' && 
                 this.settings.apiConfiguration?.apiKey) {
+                
+                console.log('🔧 創建API客戶端...');
                 this.apiClient = new BasicGeminiClient(this.settings.apiConfiguration.apiKey);
+                console.log('✅ API客戶端創建完成');
+            } else {
+                console.log('⚠️ 未創建API客戶端，原因:', {
+                    hasProvider: !!this.settings.apiConfiguration?.provider,
+                    provider: this.settings.apiConfiguration?.provider,
+                    hasApiKey: !!this.settings.apiConfiguration?.apiKey
+                });
             }
             
             this.isInitialized = true;
-            console.log('混合背景服務初始化完成');
+            console.log('✅ 混合背景服務初始化完成');
         } catch (error) {
-            console.error('背景服務初始化失敗:', error);
+            console.error('❌ 背景服務初始化失敗:', error);
+            // 即使初始化失敗，也標記為已初始化，避免無限等待
+            this.isInitialized = true;
         }
     }
 
@@ -258,14 +277,24 @@ class HybridBackgroundService {
                     break;
 
                 case 'SAVE_SETTINGS':
+                    console.log('💾 保存設定:', {
+                        provider: message.data.apiConfiguration?.provider,
+                        hasApiKey: !!message.data.apiConfiguration?.apiKey
+                    });
+                    
                     await this.saveSettings(message.data);
+                    
                     // 重新初始化API客戶端
                     if (message.data.apiConfiguration?.provider === 'google-gemini' && 
                         message.data.apiConfiguration?.apiKey) {
+                        console.log('🔧 重新創建API客戶端...');
                         this.apiClient = new BasicGeminiClient(message.data.apiConfiguration.apiKey);
+                        console.log('✅ API客戶端重新創建完成');
                     } else {
+                        console.log('🗑️ 清除API客戶端');
                         this.apiClient = null;
                     }
+                    
                     sendResponse({ success: true });
                     break;
 
@@ -316,13 +345,54 @@ class HybridBackgroundService {
 
     async translateText(text, provider, options = {}) {
         try {
+            console.log('🔄 開始翻譯請求:', {
+                provider,
+                textLength: text.length,
+                hasApiClient: !!this.apiClient,
+                isInitialized: this.isInitialized
+            });
+
+            // 確保服務已初始化
+            if (!this.isInitialized) {
+                console.log('⏳ 服務未初始化，等待初始化完成...');
+                await this.initialize();
+            }
+
+            // 重新載入設定以確保最新的API配置
+            console.log('🔄 重新載入設定以確保API配置最新...');
+            this.settings = await this.getSettings();
+            
+            console.log('📋 當前設定:', {
+                provider: this.settings.apiConfiguration?.provider,
+                hasApiKey: !!this.settings.apiConfiguration?.apiKey,
+                apiKeyLength: this.settings.apiConfiguration?.apiKey?.length || 0
+            });
+
+            // 如果沒有API客戶端但有API配置，創建API客戶端
+            if (!this.apiClient && 
+                this.settings.apiConfiguration?.provider === 'google-gemini' && 
+                this.settings.apiConfiguration?.apiKey) {
+                
+                console.log('🔧 創建API客戶端...');
+                this.apiClient = new BasicGeminiClient(this.settings.apiConfiguration.apiKey);
+                console.log('✅ API客戶端創建完成');
+            }
+
             // 如果有真實的API客戶端，使用它
             if (this.apiClient && provider === 'google-gemini') {
+                console.log('🚀 使用真實API進行翻譯');
+                
                 const targetLanguage = options.targetLanguage || 
                                      this.settings.translationPreferences?.targetLanguage || 
                                      'zh-TW';
                 
                 const result = await this.apiClient.translateText(text, targetLanguage);
+                
+                console.log('✅ 翻譯成功:', {
+                    originalLength: result.originalText.length,
+                    translatedLength: result.translatedText.length,
+                    tokensUsed: result.tokensUsed
+                });
                 
                 // 更新使用統計
                 await this.updateUsageStats({
@@ -333,6 +403,17 @@ class HybridBackgroundService {
                 
                 return result;
             } else {
+                // 檢查為什麼沒有API客戶端
+                const reason = !this.settings.apiConfiguration?.provider ? 
+                    '未選擇翻譯服務' : 
+                    !this.settings.apiConfiguration?.apiKey ? 
+                    '未設定API金鑰' : 
+                    provider !== 'google-gemini' ? 
+                    `不支援的提供者: ${provider}` : 
+                    '未知原因';
+                
+                console.warn('⚠️ 無法使用真實API，原因:', reason);
+                
                 // 降級到模擬翻譯
                 return {
                     originalText: text,
@@ -343,7 +424,7 @@ class HybridBackgroundService {
                 };
             }
         } catch (error) {
-            console.error('翻譯失敗:', error);
+            console.error('❌ 翻譯失敗:', error);
             // 如果真實API失敗，返回錯誤信息
             return {
                 originalText: text,
