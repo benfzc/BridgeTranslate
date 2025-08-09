@@ -136,9 +136,10 @@ class WebTranslationContent {
             // 創建 API 管理器代理
             const apiManagerProxy = this.createAPIManagerProxy();
 
-            // 創建段落翻譯器
+            // 創建段落翻譯器（傳遞 TranslationRenderer 以統一管理翻譯元素）
             this.paragraphTranslator = new ParagraphTranslator({
                 apiManager: apiManagerProxy,
+                translationRenderer: this.translationRenderer, // 統一使用 TranslationRenderer
                 maxParagraphLength: 1500,
                 minParagraphLength: 10,
                 splitStrategy: 'sentence'
@@ -495,15 +496,88 @@ class WebTranslationContent {
 
     async toggleTranslation() {
         try {
+            console.log('🔄 toggleTranslation 被調用');
+            console.log('當前狀態:', {
+                isTranslating: this.isTranslating,
+                translationVisible: this.translationVisible,
+                buttonState: this.buttonManager?.button?.currentState
+            });
+
             if (this.isTranslating) {
+                console.log('⏸️ 正在翻譯中，忽略點擊');
                 return; // 正在翻譯中，忽略點擊
             }
 
-            if (this.translationVisible) {
+            // 檢查是否有已存在的翻譯內容
+            const hasExistingTranslations = this.translationRenderer && 
+                this.translationRenderer.renderedTranslations && 
+                this.translationRenderer.renderedTranslations.size > 0;
+
+            console.log('翻譯內容檢查:', {
+                hasRenderer: !!this.translationRenderer,
+                hasRenderedTranslations: !!this.translationRenderer?.renderedTranslations,
+                translationCount: this.translationRenderer?.renderedTranslations?.size || 0,
+                hasExistingTranslations
+            });
+
+            // 檢查實際的翻譯元素可見性（現在統一使用 translation-content）
+            const translationElements = document.querySelectorAll('.translation-content');
+            const visibleElements = Array.from(translationElements).filter(el => 
+                !el.classList.contains('translation-hidden') && 
+                el.style.display !== 'none'
+            );
+
+            // 為了向後兼容，也檢查舊的類名（但應該逐步移除）
+            const legacyElements = document.querySelectorAll('.web-translation-result');
+            const legacyVisible = Array.from(legacyElements).filter(el => 
+                el.style.display !== 'none'
+            );
+
+            const allTranslationElements = [...translationElements, ...legacyElements];
+            const allVisibleElements = [...visibleElements, ...legacyVisible];
+
+            console.log('DOM 元素檢查:', {
+                totalElements: allTranslationElements.length,
+                visibleElements: allVisibleElements.length,
+                hiddenElements: allTranslationElements.length - allVisibleElements.length,
+                unified: { total: translationElements.length, visible: visibleElements.length },
+                legacy: { total: legacyElements.length, visible: legacyVisible.length }
+            });
+
+            // 決定執行的操作（使用實際的DOM元素數量而不是依賴 renderedTranslations）
+            const hasActualTranslations = allTranslationElements.length > 0;
+            
+            if (this.translationVisible && (hasActualTranslations || allVisibleElements.length > 0)) {
+                // 翻譯內容當前可見，隱藏它們
+                console.log('➡️ 執行操作: 隱藏翻譯內容');
                 this.hideTranslations();
-            } else {
+            } else if (hasActualTranslations && !this.translationVisible) {
+                // 翻譯內容存在但被隱藏，重新顯示它們
+                console.log('➡️ 執行操作: 重新顯示已存在的翻譯內容');
+                this.showTranslations();
+            } else if (!hasActualTranslations) {
+                // 沒有翻譯內容，開始新的翻譯
+                console.log('➡️ 執行操作: 開始新的翻譯');
                 await this.startTranslation();
+            } else {
+                // 邊緣情況：狀態不一致，嘗試修復
+                console.warn('⚠️ 狀態不一致，嘗試修復...');
+                if (allVisibleElements.length > 0) {
+                    console.log('🔧 修復: 有可見元素但 translationVisible=false，設定為 true');
+                    this.translationVisible = true;
+                    this.hideTranslations();
+                } else {
+                    console.log('🔧 修復: 沒有可見元素，顯示翻譯');
+                    this.showTranslations();
+                }
             }
+
+            console.log('操作完成後狀態:', {
+                isTranslating: this.isTranslating,
+                translationVisible: this.translationVisible,
+                buttonState: this.buttonManager?.button?.currentState
+            });
+
         } catch (error) {
             console.error('Toggle translation failed:', error);
             this.showError('翻譯功能啟動失敗：' + error.message);
@@ -577,14 +651,28 @@ class WebTranslationContent {
      */
     hideTranslations() {
         try {
-            console.log('🙈 隱藏翻譯內容');
+            console.log('🙈 開始隱藏翻譯內容');
+            console.log('隱藏前狀態:', {
+                translationVisible: this.translationVisible,
+                renderedCount: this.translationRenderer?.renderedTranslations?.size || 0
+            });
 
-            // 隱藏已渲染的翻譯內容
+            // 隱藏已渲染的翻譯內容（統一使用 TranslationRenderer）
             if (this.translationRenderer) {
+                console.log('📱 調用 TranslationRenderer.toggleTranslationVisibility(false)');
                 this.translationRenderer.toggleTranslationVisibility(false);
             }
+            
+            // 為了向後兼容，也隱藏舊的段落翻譯元素（應該逐步移除）
+            const legacyElements = document.querySelectorAll('.web-translation-result');
+            if (legacyElements.length > 0) {
+                legacyElements.forEach(element => {
+                    element.style.display = 'none';
+                });
+                console.log(`📱 隱藏了 ${legacyElements.length} 個舊版段落翻譯元素`);
+            }
 
-            // 停止智能排程系統
+            // 停止智能排程系統（但不清除已翻譯的內容）
             if (this.translationMode === 'smart-scheduling' && this.translationQueue) {
                 this.translationQueue.pause();
                 console.log('⏸️ 智能翻譯隊列已暫停');
@@ -596,18 +684,77 @@ class WebTranslationContent {
                 console.log('⏸️ 視窗翻譯管理器已停止');
             }
 
+            // 更新狀態
             this.translationVisible = false;
             this.isTranslating = false;
 
-            // 更新按鈕狀態
-            if (this.buttonManager && this.buttonManager.button) {
-                this.buttonManager.button.setState('idle');
-            }
+            // 保持按鈕狀態為 completed，因為翻譯內容仍然存在，只是被隱藏了
+            console.log('🔘 保持按鈕狀態為 completed，翻譯內容已隱藏但仍可恢復');
 
-            console.log('✅ 翻譯內容已隱藏');
+            // 驗證隱藏效果
+            const hiddenElements = document.querySelectorAll('.translation-content.translation-hidden');
+            const visibleElements = document.querySelectorAll('.translation-content:not(.translation-hidden)');
+            const legacyHidden = Array.from(document.querySelectorAll('.web-translation-result')).filter(el => el.style.display === 'none');
+            const legacyVisible = Array.from(document.querySelectorAll('.web-translation-result')).filter(el => el.style.display !== 'none');
+            
+            console.log('隱藏後驗證:', {
+                unified: { hidden: hiddenElements.length, visible: visibleElements.length },
+                legacy: { hidden: legacyHidden.length, visible: legacyVisible.length },
+                translationVisible: this.translationVisible
+            });
+
+            console.log('✅ 翻譯內容隱藏完成');
 
         } catch (error) {
             console.error('❌ 隱藏翻譯時發生錯誤:', error);
+        }
+    }
+
+    /**
+     * 顯示已存在的翻譯內容
+     */
+    showTranslations() {
+        try {
+            console.log('👁️ 開始顯示已存在的翻譯內容');
+            console.log('顯示前狀態:', {
+                translationVisible: this.translationVisible,
+                renderedCount: this.translationRenderer?.renderedTranslations?.size || 0
+            });
+
+            // 顯示已渲染的翻譯內容（統一使用 TranslationRenderer）
+            if (this.translationRenderer) {
+                console.log('📱 調用 TranslationRenderer.toggleTranslationVisibility(true)');
+                this.translationRenderer.toggleTranslationVisibility(true);
+            }
+            
+            // 為了向後兼容，也顯示舊的段落翻譯元素（應該逐步移除）
+            const legacyElements = document.querySelectorAll('.web-translation-result');
+            if (legacyElements.length > 0) {
+                legacyElements.forEach(element => {
+                    element.style.display = '';
+                });
+                console.log(`📱 顯示了 ${legacyElements.length} 個舊版段落翻譯元素`);
+            }
+
+            // 更新狀態
+            this.translationVisible = true;
+
+            // 驗證顯示效果
+            const hiddenElements = document.querySelectorAll('.translation-content.translation-hidden');
+            const visibleElements = document.querySelectorAll('.translation-content:not(.translation-hidden)');
+            const legacyHidden = Array.from(document.querySelectorAll('.web-translation-result')).filter(el => el.style.display === 'none');
+            const legacyVisible = Array.from(document.querySelectorAll('.web-translation-result')).filter(el => el.style.display !== 'none');
+            
+            console.log('顯示後驗證:', {
+                unified: { hidden: hiddenElements.length, visible: visibleElements.length },
+                legacy: { hidden: legacyHidden.length, visible: legacyVisible.length },
+                translationVisible: this.translationVisible
+            });
+
+            console.log('✅ 翻譯內容顯示完成');
+
+        } catch (error) {
+            console.error('❌ 顯示翻譯時發生錯誤:', error);
         }
     }
 

@@ -155,13 +155,17 @@ class ParagraphTranslator {
      * @returns {boolean}
      */
     isAlreadyTranslated(element) {
-        // 檢查下一個兄弟元素是否為翻譯結果
+        // 檢查下一個兄弟元素是否為翻譯結果（統一檢查 translation-content 類名）
         const nextSibling = element.nextElementSibling;
-        return nextSibling && nextSibling.classList.contains(this.options.translationClass);
+        return nextSibling && (
+            nextSibling.classList.contains('translation-content') ||
+            nextSibling.classList.contains(this.options.translationClass)
+        );
     }
 
     /**
      * 在段落下方插入翻譯結果
+     * 使用 TranslationRenderer 來統一管理翻譯元素
      * @param {HTMLElement} originalElement
      * @param {string} translatedText
      * @returns {HTMLElement}
@@ -173,29 +177,58 @@ class ParagraphTranslator {
             existingTranslation.remove();
         }
 
-        const translationElement = document.createElement('div');
-        translationElement.className = this.options.translationClass;
-        translationElement.textContent = translatedText;
+        // 如果有 TranslationRenderer 可用，使用它來渲染
+        if (this.options.translationRenderer) {
+            // 創建一個模擬的 segment 對象
+            const segment = {
+                id: `paragraph_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                text: originalElement.textContent.trim(),
+                element: originalElement,
+                priority: 'medium',
+                type: 'paragraph'
+            };
 
-        // 添加一些基本樣式
-        translationElement.style.cssText = `
-            color: #666;
-            font-style: italic;
-            margin-top: 5px;
-            margin-bottom: 10px;
-            padding: 8px;
-            background-color: #f8f9fa;
-            border-left: 3px solid #007bff;
-            border-radius: 3px;
-        `;
+            // 創建一個模擬的 translation 對象
+            const translation = {
+                originalText: segment.text,
+                translatedText: translatedText,
+                provider: 'paragraph-translator',
+                tokensUsed: Math.ceil(translatedText.length / 4),
+                timestamp: Date.now()
+            };
 
-        // 插入到原段落後面
-        originalElement.parentNode.insertBefore(
-            translationElement,
-            originalElement.nextSibling
-        );
+            // 使用 TranslationRenderer 來渲染
+            this.options.translationRenderer.renderTranslation(segment, translation);
+            
+            // 返回渲染的元素
+            const renderedData = this.options.translationRenderer.renderedTranslations.get(segment.id);
+            return renderedData ? renderedData.element : null;
+        } else {
+            // 降級方案：直接創建元素（使用統一的類名）
+            const translationElement = document.createElement('div');
+            translationElement.className = 'translation-content'; // 使用統一的類名
+            translationElement.textContent = translatedText;
 
-        return translationElement;
+            // 添加一些基本樣式
+            translationElement.style.cssText = `
+                color: #666;
+                font-style: italic;
+                margin-top: 5px;
+                margin-bottom: 10px;
+                padding: 8px;
+                background-color: #f8f9fa;
+                border-left: 3px solid #007bff;
+                border-radius: 3px;
+            `;
+
+            // 插入到原段落後面
+            originalElement.parentNode.insertBefore(
+                translationElement,
+                originalElement.nextSibling
+            );
+
+            return translationElement;
+        }
     }
 
     /**

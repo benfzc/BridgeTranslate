@@ -143,26 +143,15 @@ class TranslationButton {
     
     /**
      * 處理按鈕點擊事件
+     * 注意：實際的點擊邏輯由 WebTranslationContent 處理，這裡只做基本的事件處理
      */
     handleClick(event) {
         event.preventDefault();
         event.stopPropagation();
         
-        // 根據當前狀態執行不同操作
-        switch (this.currentState) {
-            case 'idle':
-                this.startTranslation();
-                break;
-            case 'completed':
-                this.toggleTranslationVisibility();
-                break;
-            case 'error':
-                this.retryTranslation();
-                break;
-            case 'translating':
-                // 翻譯中不允許點擊
-                break;
-        }
+        // 不在這裡處理具體的翻譯邏輯，讓主系統 (WebTranslationContent) 處理
+        // 這樣可以避免雙重事件處理和邏輯衝突
+        console.log('🔘 翻譯按鈕被點擊，狀態:', this.currentState);
     }
     
     /**
