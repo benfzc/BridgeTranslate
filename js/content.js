@@ -1145,7 +1145,6 @@ console.log('- 當前URL:', window.location.href);
 console.log('- Document ready state:', document.readyState);
 console.log('- 時間戳:', new Date().toISOString());
 console.log('- 依賴檢查:', {
-    ErrorHandler: typeof ErrorHandler,
     ContentAnalyzer: typeof ContentAnalyzer,
     TranslationRenderer: typeof TranslationRenderer,
     TranslationButton: typeof TranslationButton,
