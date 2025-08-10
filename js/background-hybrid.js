@@ -539,9 +539,7 @@ class HybridBackgroundService {
             },
             translationPreferences: result.translationPreferences || {
                 targetLanguage: 'zh-TW',
-                showOriginalText: true,
                 translationPosition: 'below',
-                autoTranslateVisible: false,
                 excludeSelectors: ['.ad', '.advertisement', '.sponsor']
             },
             usageStats: result.usageStats || {
@@ -569,9 +567,7 @@ class HybridBackgroundService {
             },
             translationPreferences: {
                 targetLanguage: 'zh-TW',
-                showOriginalText: true,
                 translationPosition: 'below',
-                autoTranslateVisible: false,
                 excludeSelectors: ['.ad', '.advertisement', '.sponsor']
             },
             usageStats: {

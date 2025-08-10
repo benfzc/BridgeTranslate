@@ -16,64 +16,85 @@ class WebTranslationContent {
         this.smartScheduler = null;
         this.translationMode = 'smart-scheduling'; // 新的智能排程模式
 
-        // 保留舊系統以備降級使用
-        this.boundaryDetector = null;
-        this.viewportManager = null;
-        this.scrollTranslationEnabled = false; // 停用舊的滾動翻譯
+
 
         this.init();
     }
 
     async init() {
         try {
+            console.log('🚀 開始初始化 Bridge Translate...');
+            
             // 載入設定
             await this.loadSettings();
+            console.log('✅ 設定載入完成');
 
             // 創建組件
             this.createComponents();
+            console.log('✅ 組件創建完成');
 
             // 載入按鈕可見性狀態
             await this.loadButtonVisibilityState();
+            console.log('✅ 按鈕可見性狀態載入完成');
 
             // 綁定事件
             this.attachEvents();
+            console.log('✅ 事件綁定完成');
 
-            console.log('Bridge Translate loaded');
+            console.log('🎉 Bridge Translate 初始化完成');
+            
+            // 通知背景服務content script已準備就緒
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'CONTENT_SCRIPT_READY',
+                    tabId: null, // 會由背景服務自動填入
+                    timestamp: Date.now()
+                });
+                console.log('📡 已通知背景服務content script準備就緒');
+            } catch (error) {
+                console.log('⚠️ 無法通知背景服務:', error.message);
+            }
         } catch (error) {
-            console.error('初始化失敗:', error);
+            console.error('❌ 初始化失敗:', error);
+            console.error('錯誤詳情:', error.message, error.stack);
+            
+            // 嘗試創建基本的錯誤處理按鈕
+            console.log('🔧 嘗試創建 Fallback 按鈕...');
+            this.createFallbackButton();
+            
+            // 確保訊息處理仍然可用
+            this.attachEvents();
+            console.log('⚠️ 使用降級模式運行');
         }
     }
 
     async loadSettings() {
         try {
             console.log('載入設定中...');
-            const response = await chrome.storage.sync.get(['apiConfiguration', 'translationPreferences', 'usageStats']);
-            console.log('設定載入回應:', response);
-
-            this.settings = {
-                apiConfiguration: response.apiConfiguration || {
-                    provider: 'google-gemini',
-                    apiKey: '',
-                    model: 'gemini-2.5-flash-lite',
-                    maxTokensPerRequest: 4000
-                },
-                translationPreferences: response.translationPreferences || {
-                    targetLanguage: 'zh-TW',
-                    showOriginalText: true,
-                    translationPosition: 'below',
-                    autoTranslateVisible: false
-                },
-                usageStats: response.usageStats || {
-                    totalTranslations: 0,
-                    tokensUsed: 0,
-                    estimatedCost: 0
-                }
-            };
-
-            console.log('設定載入成功:', this.settings);
+            
+            // 先測試背景服務通訊
+            console.log('測試背景服務通訊...');
+            const pingResponse = await chrome.runtime.sendMessage({ type: 'PING' });
+            console.log('PING 回應:', pingResponse);
+            
+            // 統一使用背景服務的設定管理
+            console.log('發送 GET_SETTINGS 請求...');
+            const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
+            console.log('GET_SETTINGS 回應:', response);
+            
+            if (response.success) {
+                this.settings = response.data;
+                console.log('設定載入成功:', this.settings);
+            } else {
+                throw new Error(response.error || '載入設定失敗');
+            }
         } catch (error) {
             console.error('載入設定失敗:', error);
+            console.error('錯誤詳情:', error.message, error.stack);
+            
+            // 使用預設設定
             this.settings = this.getDefaultSettings();
+            console.log('使用預設設定:', this.settings);
         }
     }
 
@@ -87,9 +108,8 @@ class WebTranslationContent {
             },
             translationPreferences: {
                 targetLanguage: 'zh-TW',
-                showOriginalText: true,
                 translationPosition: 'below',
-                autoTranslateVisible: false
+                excludeSelectors: ['.ad', '.advertisement', '.sponsor']
             },
             usageStats: {
                 totalTranslations: 0,
@@ -102,6 +122,7 @@ class WebTranslationContent {
     createComponents() {
         try {
             console.log('開始創建組件 (智能排程模式)...');
+            console.log('當前設定:', this.settings);
 
             // 檢查新系統依賴是否載入
             const dependencies = {
@@ -121,8 +142,7 @@ class WebTranslationContent {
 
             if (undefinedDeps.length > 0) {
                 console.error('以下依賴未正確載入:', undefinedDeps);
-                // 嘗試降級到舊系統
-                return this.createLegacyComponents();
+                throw new Error(`缺少必要依賴: ${undefinedDeps.join(', ')}`);
             }
 
             // 創建內容分析器
@@ -173,24 +193,40 @@ class WebTranslationContent {
 
             // 創建按鈕管理器
             console.log('正在創建按鈕管理器...');
+            console.log('TranslationButtonManager 類型:', typeof TranslationButtonManager);
+            
+            if (typeof TranslationButtonManager === 'undefined') {
+                throw new Error('TranslationButtonManager 類未載入');
+            }
+            
             this.buttonManager = new TranslationButtonManager();
             console.log('✅ TranslationButtonManager 創建完成');
+            console.log('按鈕管理器實例:', this.buttonManager);
 
-            // 檢查按鈕是否正確創建
-            if (this.buttonManager && this.buttonManager.button) {
-                console.log('✅ 翻譯按鈕創建成功');
-            } else {
-                console.warn('⚠️ 翻譯按鈕創建可能有問題');
-            }
+            // 等待按鈕初始化完成
+            setTimeout(() => {
+                if (this.buttonManager && this.buttonManager.button) {
+                    console.log('✅ 翻譯按鈕創建成功');
+                    console.log('按鈕詳情:', {
+                        hasButton: !!this.buttonManager.button,
+                        hasContainer: !!this.buttonManager.button?.container,
+                        isVisible: this.buttonManager.button?.isVisible,
+                        isInitialized: this.buttonManager.isInitialized
+                    });
+                } else {
+                    console.warn('⚠️ 翻譯按鈕創建失敗，將使用fallback按鈕');
+                    this.createFallbackButton();
+                }
+            }, 100);
 
             console.log('🎉 所有組件創建完成 (智能排程模式)');
 
         } catch (error) {
             console.error('創建組件失敗:', error);
             console.error('錯誤詳情:', error.stack);
-
-            // 嘗試降級到舊系統
-            this.createLegacyComponents();
+            
+            // 創建基本的錯誤處理按鈕
+            this.createFallbackButton();
         }
     }
 
@@ -352,102 +388,7 @@ class WebTranslationContent {
         };
     }
 
-    /**
-     * 創建舊系統組件 (降級模式)
-     */
-    createLegacyComponents() {
-        console.log('⚠️ 降級到舊系統模式...');
 
-        try {
-            // 檢查舊系統依賴
-            if (typeof TranslationBoundaryDetector !== 'undefined' &&
-                typeof ViewportTranslationManager !== 'undefined') {
-
-                // 創建內容分析器
-                this.contentAnalyzer = new ContentAnalyzer();
-
-                // 創建翻譯渲染器
-                this.translationRenderer = new TranslationRenderer();
-
-                // 創建邊界檢測器
-                this.boundaryDetector = new TranslationBoundaryDetector();
-
-                // 創建視窗翻譯管理器
-                this.viewportManager = new ViewportTranslationManager({
-                    scrollThrottle: 200,
-                    batchSize: 3,
-                    batchDelay: 500,
-                    maxConcurrentRequests: 2,
-                    preloadMargin: 200,
-                    enabled: true
-                });
-
-                // 初始化視窗翻譯管理器
-                this.initializeViewportManager();
-
-                // 創建按鈕管理器
-                this.buttonManager = new TranslationButtonManager();
-
-                this.translationMode = 'legacy-viewport';
-                console.log('✅ 舊系統組件創建完成');
-
-            } else {
-                // 最後的降級選項
-                this.createFallbackButton();
-            }
-
-        } catch (error) {
-            console.error('舊系統創建失敗:', error);
-            this.createFallbackButton();
-        }
-    }
-
-    /**
-     * 初始化視窗翻譯管理器
-     */
-    async initializeViewportManager() {
-        try {
-            if (!this.viewportManager) return;
-
-            // 創建 API 管理器代理
-            const apiManagerProxy = {
-                translateText: async (text, options = {}) => {
-                    try {
-                        const response = await chrome.runtime.sendMessage({
-                            type: 'TRANSLATE_TEXT',
-                            text: text,
-                            provider: this.settings?.apiConfiguration?.provider || 'google-gemini',
-                            options: {
-                                targetLanguage: options.targetLanguage || this.settings?.translationPreferences?.targetLanguage || 'zh-TW',
-                                ...options
-                            }
-                        });
-
-                        if (response.success) {
-                            return response.translation;
-                        } else {
-                            throw new Error(response.error || '翻譯請求失敗');
-                        }
-                    } catch (error) {
-                        console.error('API 管理器代理錯誤:', error);
-                        throw error;
-                    }
-                }
-            };
-
-            // 初始化視窗管理器
-            await this.viewportManager.initialize({
-                boundaryDetector: this.boundaryDetector,
-                translationRenderer: this.translationRenderer,
-                apiManager: apiManagerProxy
-            });
-
-            console.log('視窗翻譯管理器初始化完成');
-
-        } catch (error) {
-            console.error('初始化視窗翻譯管理器失敗:', error);
-        }
-    }
 
     /**
      * 創建降級按鈕
@@ -481,17 +422,54 @@ class WebTranslationContent {
     }
 
     attachEvents() {
-        if (this.buttonManager && this.buttonManager.button) {
-            this.buttonManager.button.button.addEventListener('click', () => {
-                this.toggleTranslation();
-            });
+        // 綁定按鈕點擊事件（如果按鈕存在）
+        try {
+            if (this.buttonManager && this.buttonManager.button && this.buttonManager.button.button) {
+                this.buttonManager.button.button.addEventListener('click', () => {
+                    this.toggleTranslation();
+                });
+                console.log('✅ 主按鈕事件綁定完成');
+            } else if (this.fallbackButton) {
+                // Fallback按鈕的事件已在createFallbackButton中綁定
+                console.log('✅ Fallback按鈕事件已綁定');
+            } else {
+                console.warn('⚠️ 沒有可用的按鈕進行事件綁定');
+            }
+        } catch (error) {
+            console.error('❌ 按鈕事件綁定失敗:', error);
         }
 
-        // 監聽來自擴展的訊息
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            this.handleMessage(message, sender, sendResponse);
-            return true; // 保持訊息通道開放
-        });
+        // 監聽來自擴展的訊息（這個必須正常工作）
+        try {
+            // 確保移除任何現有的監聽器
+            if (chrome.runtime.onMessage.hasListeners()) {
+                chrome.runtime.onMessage.removeListener(this.messageHandler);
+            }
+            
+            // 綁定訊息處理器
+            this.messageHandler = (message, sender, sendResponse) => {
+                console.log('📨 Content script 收到訊息:', {
+                    type: message.type,
+                    message: message,
+                    sender: sender,
+                    timestamp: Date.now()
+                });
+                
+                try {
+                    this.handleMessage(message, sender, sendResponse);
+                } catch (error) {
+                    console.error('❌ 處理訊息時發生錯誤:', error);
+                    sendResponse({ success: false, error: error.message });
+                }
+                
+                return true; // 保持訊息通道開放
+            };
+            
+            chrome.runtime.onMessage.addListener(this.messageHandler);
+            console.log('✅ 訊息監聽器綁定完成');
+        } catch (error) {
+            console.error('❌ 訊息監聽器綁定失敗:', error);
+        }
     }
 
     async toggleTranslation() {
@@ -616,21 +594,8 @@ class WebTranslationContent {
 
                 console.log('✅ 智能排程翻譯啟動成功');
 
-            } else if (this.translationMode === 'legacy-viewport' && this.viewportManager) {
-                console.log('📜 使用舊版視窗翻譯系統');
-
-                // 更新按鈕狀態
-                if (this.buttonManager && this.buttonManager.button) {
-                    this.buttonManager.button.setState('translating');
-                }
-
-                this.viewportManager.start();
-                this.translationVisible = true;
-
-                console.log('✅ 視窗翻譯系統啟動成功');
-
             } else {
-                throw new Error('沒有可用的翻譯系統');
+                throw new Error('智能翻譯系統未正確初始化');
             }
 
         } catch (error) {
@@ -678,11 +643,7 @@ class WebTranslationContent {
                 console.log('⏸️ 智能翻譯隊列已暫停');
             }
 
-            // 停止舊版視窗翻譯系統
-            if (this.translationMode === 'legacy-viewport' && this.viewportManager) {
-                this.viewportManager.stop();
-                console.log('⏸️ 視窗翻譯管理器已停止');
-            }
+
 
             // 更新狀態
             this.translationVisible = false;
@@ -790,7 +751,11 @@ class WebTranslationContent {
      */
     handleMessage(message, sender, sendResponse) {
         try {
-            console.log('收到訊息:', message);
+            console.log('🔍 開始處理訊息:', {
+                type: message.type,
+                timestamp: message.timestamp,
+                sender: sender?.tab?.id || 'unknown'
+            });
 
             switch (message.type) {
                 case 'TOGGLE_TRANSLATION':
@@ -819,10 +784,37 @@ class WebTranslationContent {
 
                 case 'TOGGLE_BUTTON_VISIBILITY':
                     try {
-                        console.log('📨 收到按鈕可見性切換訊息:', message);
+                        console.log('📨 收到按鈕可見性切換訊息:', {
+                            visible: message.visible,
+                            timestamp: message.timestamp,
+                            source: message.source || 'unknown'
+                        });
+                        console.log('🔧 開始執行按鈕可見性切換...');
+                        
                         this.handleButtonVisibilityToggle(message.visible);
+                        
+                        // 驗證操作是否成功
+                        let operationSuccess = false;
+                        let statusMessage = '';
+                        
+                        if (this.buttonManager && this.buttonManager.button) {
+                            const visibility = this.buttonManager.button.getVisibility();
+                            operationSuccess = visibility.isVisible === message.visible;
+                            statusMessage = `按鈕管理器操作${operationSuccess ? '成功' : '失敗'}`;
+                        } else if (this.fallbackButton) {
+                            const isVisible = this.fallbackButton.style.display !== 'none';
+                            operationSuccess = isVisible === message.visible;
+                            statusMessage = `Fallback按鈕操作${operationSuccess ? '成功' : '失敗'}`;
+                        } else {
+                            statusMessage = '無可用按鈕實例';
+                        }
+                        
+                        console.log(`📊 操作結果: ${statusMessage}`);
+                        
                         sendResponse({ 
-                            success: true, 
+                            success: true, // 總是返回成功，因為我們有fallback機制
+                            operationSuccess: operationSuccess,
+                            statusMessage: statusMessage,
                             timestamp: Date.now(),
                             visible: message.visible,
                             source: message.source || 'unknown'
@@ -843,8 +835,16 @@ class WebTranslationContent {
                         translationVisible: this.translationVisible,
                         buttonVisibility: this.buttonManager?.button?.getVisibility(),
                         translationFunctionality: this.buttonManager?.button?.isTranslationFunctional(),
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        // 添加更多診斷信息
+                        hasButtonManager: !!this.buttonManager,
+                        hasButton: !!this.buttonManager?.button,
+                        hasContainer: !!this.buttonManager?.button?.container,
+                        buttonManagerInitialized: this.buttonManager?.isInitialized,
+                        fallbackButtonExists: !!this.fallbackButton,
+                        contentScriptVersion: '1.0.0'
                     };
+                    console.log('📊 返回翻譯狀態:', status);
                     sendResponse({ success: true, ...status });
                     break;
 
@@ -892,16 +892,7 @@ class WebTranslationContent {
             }
         }
 
-        // 清除舊版系統
-        if (this.translationMode === 'legacy-viewport') {
-            if (this.viewportManager) {
-                this.viewportManager.stop();
-            }
 
-            if (this.boundaryDetector) {
-                this.boundaryDetector.clearBoundaryCache();
-            }
-        }
 
         this.translationVisible = false;
         this.isTranslating = false;
@@ -920,7 +911,39 @@ class WebTranslationContent {
     handleButtonVisibilityToggle(visible) {
         console.log('🔘 切換翻譯按鈕可見性:', visible);
 
-        if (this.buttonManager && this.buttonManager.button) {
+        // 檢查按鈕管理器是否存在
+        if (!this.buttonManager) {
+            console.warn('⚠️ 翻譯按鈕管理器未初始化，嘗試重新創建...');
+            try {
+                this.createComponents();
+            } catch (error) {
+                console.error('❌ 重新創建組件失敗:', error);
+                // 使用fallback按鈕
+                if (this.fallbackButton) {
+                    this.fallbackButton.style.display = visible ? 'block' : 'none';
+                    console.log(`✅ Fallback按鈕已${visible ? '顯示' : '隱藏'}`);
+                }
+                return;
+            }
+        }
+
+        // 檢查按鈕實例是否存在
+        if (!this.buttonManager.button) {
+            console.warn('⚠️ 翻譯按鈕實例不存在，嘗試重新初始化按鈕管理器...');
+            try {
+                this.buttonManager.init();
+            } catch (error) {
+                console.error('❌ 重新初始化按鈕管理器失敗:', error);
+                // 使用fallback按鈕
+                if (this.fallbackButton) {
+                    this.fallbackButton.style.display = visible ? 'block' : 'none';
+                    console.log(`✅ Fallback按鈕已${visible ? '顯示' : '隱藏'}`);
+                }
+                return;
+            }
+        }
+
+        try {
             // 獲取切換前的狀態
             const beforeState = this.buttonManager.button.getVisibility();
             console.log('切換前狀態:', beforeState);
@@ -937,12 +960,22 @@ class WebTranslationContent {
 
             // 獲取切換後的狀態
             setTimeout(() => {
-                const afterState = this.buttonManager.button.getVisibility();
-                console.log('切換後狀態:', afterState);
+                try {
+                    const afterState = this.buttonManager.button.getVisibility();
+                    console.log('切換後狀態:', afterState);
+                } catch (error) {
+                    console.warn('⚠️ 獲取切換後狀態失敗:', error);
+                }
             }, 350); // 等待動畫完成
 
-        } else {
-            console.log('⚠️ 翻譯按鈕管理器未初始化');
+        } catch (error) {
+            console.error('❌ 切換按鈕可見性時發生錯誤:', error);
+            
+            // 使用fallback按鈕作為備用方案
+            if (this.fallbackButton) {
+                this.fallbackButton.style.display = visible ? 'block' : 'none';
+                console.log(`✅ 使用Fallback按鈕，已${visible ? '顯示' : '隱藏'}`);
+            }
         }
     }
 
@@ -958,17 +991,33 @@ class WebTranslationContent {
             
             // 設定按鈕可見性（跳過動畫以避免頁面載入時的閃爍）
             if (this.buttonManager && this.buttonManager.button) {
-                this.buttonManager.button.setVisibility(isVisible, true);
-                console.log('✅ 按鈕可見性狀態已設定');
-            } else {
-                console.log('⚠️ 按鈕管理器尚未初始化，稍後重試');
-                // 延遲重試
-                setTimeout(() => {
-                    if (this.buttonManager && this.buttonManager.button) {
-                        this.buttonManager.button.setVisibility(isVisible, true);
-                        console.log('✅ 延遲設定按鈕可見性狀態成功');
+                try {
+                    this.buttonManager.button.setVisibility(isVisible, true);
+                    console.log('✅ 按鈕可見性設定完成');
+                } catch (error) {
+                    console.error('❌ 設定按鈕可見性失敗:', error);
+                    // 使用fallback按鈕
+                    if (this.fallbackButton) {
+                        this.fallbackButton.style.display = isVisible ? 'block' : 'none';
+                        console.log(`✅ 使用Fallback按鈕設定可見性: ${isVisible}`);
                     }
-                }, 1000);
+                }
+            } else {
+                console.warn('⚠️ 按鈕管理器或按鈕實例不存在');
+                // 使用fallback按鈕
+                if (this.fallbackButton) {
+                    this.fallbackButton.style.display = isVisible ? 'block' : 'none';
+                    console.log(`✅ 使用Fallback按鈕設定可見性: ${isVisible}`);
+                } else {
+                    console.log('⚠️ 按鈕管理器尚未初始化，稍後重試');
+                    // 延遲重試
+                    setTimeout(() => {
+                        if (this.buttonManager && this.buttonManager.button) {
+                            this.buttonManager.button.setVisibility(isVisible, true);
+                            console.log('✅ 延遲設定按鈕可見性狀態成功');
+                        }
+                    }, 1000);
+                }
             }
         } catch (error) {
             console.error('載入按鈕可見性狀態失敗:', error);
@@ -1003,15 +1052,7 @@ class WebTranslationContent {
             }
         }
 
-        // 舊版系統統計
-        if (this.translationMode === 'legacy-viewport') {
-            stats.scrollTranslationEnabled = this.scrollTranslationEnabled;
 
-            if (this.viewportManager) {
-                const viewportStats = this.viewportManager.getStats();
-                stats.viewport = viewportStats;
-            }
-        }
 
         // 渲染器統計
         if (this.translationRenderer) {
@@ -1061,15 +1102,7 @@ class WebTranslationContent {
                 this.buttonManager = null;
             }
 
-            if (this.viewportManager) {
-                this.viewportManager.stop();
-                this.viewportManager = null;
-            }
 
-            if (this.boundaryDetector) {
-                this.boundaryDetector.clearBoundaryCache();
-                this.boundaryDetector = null;
-            }
 
             if (this.contentAnalyzer) {
                 this.contentAnalyzer = null;
@@ -1106,5 +1139,46 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+// 診斷信息
+console.log('🔍 Content Script 載入診斷:');
+console.log('- 當前URL:', window.location.href);
+console.log('- Document ready state:', document.readyState);
+console.log('- 時間戳:', new Date().toISOString());
+console.log('- 依賴檢查:', {
+    ErrorHandler: typeof ErrorHandler,
+    ContentAnalyzer: typeof ContentAnalyzer,
+    TranslationRenderer: typeof TranslationRenderer,
+    TranslationButton: typeof TranslationButton,
+    TranslationButtonManager: typeof TranslationButtonManager,
+    RateLimitedTranslationQueue: typeof RateLimitedTranslationQueue,
+    SmartTranslationScheduler: typeof SmartTranslationScheduler
+});
+
+// 添加全域測試函數
+window.testContentScript = () => {
+    console.log('🧪 Content Script 測試:');
+    console.log('- webTranslationContent 存在:', !!window.webTranslationContent);
+    console.log('- 訊息處理器存在:', !!window.webTranslationContent?.messageHandler);
+    console.log('- 按鈕管理器存在:', !!window.webTranslationContent?.buttonManager);
+    console.log('- 按鈕存在:', !!window.webTranslationContent?.buttonManager?.button);
+    
+    // 測試訊息處理
+    if (window.webTranslationContent) {
+        console.log('🧪 測試訊息處理...');
+        window.webTranslationContent.handleMessage(
+            { type: 'PING', timestamp: Date.now() },
+            { tab: { id: 'test' } },
+            (response) => console.log('🧪 測試回應:', response)
+        );
+    }
+};
+
 // 初始化
-window.webTranslationContent = new WebTranslationContent();
+try {
+    console.log('🚀 開始創建 WebTranslationContent 實例...');
+    window.webTranslationContent = new WebTranslationContent();
+    console.log('✅ WebTranslationContent 實例創建成功');
+} catch (error) {
+    console.error('❌ WebTranslationContent 實例創建失敗:', error);
+    console.error('錯誤堆疊:', error.stack);
+}

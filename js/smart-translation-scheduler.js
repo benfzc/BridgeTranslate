@@ -443,16 +443,11 @@ class SmartTranslationScheduler {
     convertNodesToSegments(textNodes) {
         const segments = [];
 
-        if (window.debugHelper) {
-            window.debugHelper.log('convertNodesToSegments', `開始轉換 ${textNodes.length} 個文本節點`);
-        }
+
 
         textNodes.forEach((node, index) => {
             try {
-                // 詳細檢查每個節點
-                if (window.debugHelper) {
-                    window.debugHelper.inspectNode(node, `TextNode-${index}`);
-                }
+                // 詳細檢查每個節點 (調試代碼已移除)
 
                 const text = node.textContent.trim();
 
@@ -461,9 +456,7 @@ class SmartTranslationScheduler {
 
                 if (!elementForType) {
                     console.warn(`節點 ${index} 沒有父元素，跳過`, node);
-                    if (window.debugHelper) {
-                        window.debugHelper.log('convertNodesToSegments', `節點 ${index} 沒有父元素，跳過`);
-                    }
+
                     return;
                 }
 
@@ -482,25 +475,15 @@ class SmartTranslationScheduler {
 
                 segments.push(segment);
 
-                if (window.debugHelper) {
-                    window.debugHelper.log('convertNodesToSegments', `成功轉換節點 ${index}`, {
-                        text: text.substring(0, 50) + '...',
-                        type: segment.type,
-                        isVisible: segment.isVisible
-                    });
-                }
+
 
             } catch (error) {
                 console.error(`轉換節點 ${index} 時發生錯誤:`, error, node);
-                if (window.debugHelper) {
-                    window.debugHelper.logError('convertNodesToSegments', error, { index, node });
-                }
+
             }
         });
 
-        if (window.debugHelper) {
-            window.debugHelper.log('convertNodesToSegments', `轉換完成，共 ${segments.length} 個段落`);
-        }
+
 
         return segments;
     }
@@ -538,17 +521,12 @@ class SmartTranslationScheduler {
      * @returns {string} 段落類型
      */
     determineSegmentType(element) {
-        // 使用調試工具檢查元素
-        if (window.debugHelper) {
-            window.debugHelper.inspectNode(element, 'determineSegmentType-element');
-        }
+        // 檢查元素類型
 
         // 安全檢查 tagName
         if (!element || !element.tagName) {
             console.error('determineSegmentType: element 或 tagName 為空', element);
-            if (window.debugHelper) {
-                window.debugHelper.logError('determineSegmentType', 'Invalid element or missing tagName', { element });
-            }
+
             return 'other';
         }
 

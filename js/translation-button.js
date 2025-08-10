@@ -308,10 +308,14 @@ class TranslationButton {
             this.container.style.opacity = '0';
             this.container.style.transform = 'scale(0.8)';
             
+            // 立即更新狀態，避免狀態檢查的時間差問題
+            this.isVisible = false;
+            
             setTimeout(() => {
-                this.container.style.display = 'none';
-                this.isVisible = false;
-                console.log('翻譯按鈕已隱藏');
+                if (this.container) { // 確保容器仍然存在
+                    this.container.style.display = 'none';
+                    console.log('翻譯按鈕已隱藏');
+                }
             }, 300);
         } else if (!this.container) {
             console.error('按鈕容器不存在，無法隱藏');

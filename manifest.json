@@ -24,15 +24,13 @@
     {
       "matches": ["<all_urls>"],
       "js": [
-        "js/debug-helper.js",
+        "js/error-handler.js",
         "js/models.js",
         "js/content-analyzer.js",
         "js/paragraph-translator.js",
         "js/translation-renderer.js",
         "js/translation-button.js",
         "js/button-manager.js",
-        "js/translation-boundary-detector.js",
-        "js/viewport-translation-manager.js",
         "js/rate-limited-queue.js",
         "js/smart-translation-scheduler.js",
         "js/content.js"
@@ -54,14 +52,10 @@
       "resources": [
         "css/translation.css",
         "js/models.js",
-        "js/api-services.js",
-        "js/api-manager.js",
         "js/content-analyzer.js",
         "js/translation-renderer.js",
         "js/translation-button.js",
-        "js/button-manager.js",
-        "js/translation-boundary-detector.js",
-        "js/viewport-translation-manager.js"
+        "js/button-manager.js"
       ],
       "matches": ["<all_urls>"]
     }

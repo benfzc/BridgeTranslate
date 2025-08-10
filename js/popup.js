@@ -31,8 +31,14 @@ class PopupController {
         // 載入按鈕可見性狀態
         await this.loadButtonVisibilityState();
         
-        // 檢查通訊健康狀態
-        this.communicationHealthy = await this.checkCommunicationHealth();
+        // 檢查通訊健康狀態（延遲一點以確保content script完全載入）
+        setTimeout(async () => {
+            this.communicationHealthy = await this.checkCommunicationHealth();
+            this.updateUI();
+            
+            // 添加調試功能
+            this.addDebugFeatures();
+        }, 500);
         
         // 更新 UI
         this.updateUI();
@@ -86,12 +92,31 @@ class PopupController {
     async loadTranslationStatus() {
         try {
             console.log('📊 載入翻譯狀態...');
+            console.log('當前分頁:', this.currentTab);
+            
+            if (!this.currentTab) {
+                console.log('❌ 無當前分頁');
+                this.communicationHealthy = false;
+                return;
+            }
+            
+            if (!this.isSupportedPage(this.currentTab.url)) {
+                console.log('⚠️ 當前頁面不支援翻譯:', this.currentTab.url);
+                this.communicationHealthy = false;
+                return;
+            }
             
             // 向當前標籤頁的 content script 查詢狀態
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: 'GET_TRANSLATION_STATUS',
-                timestamp: Date.now()
-            });
+            console.log('📤 發送 GET_TRANSLATION_STATUS 到分頁:', this.currentTab.id);
+            const response = await Promise.race([
+                chrome.tabs.sendMessage(this.currentTab.id, {
+                    type: 'GET_TRANSLATION_STATUS',
+                    timestamp: Date.now()
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('查詢狀態超時')), 2000)
+                )
+            ]);
 
             if (response && response.success) {
                 console.log('✅ 翻譯狀態載入成功:', response);
@@ -107,17 +132,26 @@ class PopupController {
                 this.communicationHealthy = false;
             }
         } catch (error) {
-            console.log('⚠️ Content script 未就緒或頁面不支援:', error.message);
+            console.log('⚠️ Content script 通訊失敗:', error.message);
+            console.log('錯誤詳情:', error);
             this.communicationHealthy = false;
-            // 這是正常情況，某些頁面可能不支援內容腳本
+            
+            // 提供更詳細的錯誤分析
+            if (error.message.includes('Could not establish connection')) {
+                console.log('ℹ️ 可能原因: Content script 未載入或頁面不支援');
+            } else if (error.message.includes('Extension context invalidated')) {
+                console.log('ℹ️ 可能原因: 擴展需要重新載入');
+            } else if (error.message.includes('超時')) {
+                console.log('ℹ️ 可能原因: Content script 響應緩慢');
+            }
         }
     }
 
     /**
      * 檢查與 content script 的通訊健康狀態
      */
-    async checkCommunicationHealth() {
-        console.log('🔍 檢查通訊健康狀態...');
+    async checkCommunicationHealth(retryCount = 0) {
+        console.log(`🔍 檢查通訊健康狀態... (嘗試 ${retryCount + 1}/3)`);
         
         if (!this.currentTab || !this.isSupportedPage(this.currentTab.url)) {
             console.log('⚠️ 當前頁面不支援通訊');
@@ -126,10 +160,15 @@ class PopupController {
         
         try {
             const startTime = Date.now();
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: 'PING',
-                timestamp: startTime
-            });
+            const response = await Promise.race([
+                chrome.tabs.sendMessage(this.currentTab.id, {
+                    type: 'PING',
+                    timestamp: startTime
+                }),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('通訊超時')), 2000)
+                )
+            ]);
             
             const responseTime = Date.now() - startTime;
             
@@ -137,11 +176,34 @@ class PopupController {
                 console.log(`✅ 通訊健康檢查通過 (${responseTime}ms)`);
                 return true;
             } else {
-                console.log('❌ 通訊健康檢查失敗: 無效回應');
+                console.log('❌ 通訊健康檢查失敗: 無效回應', response);
+                
+                // 如果是第一次失敗且重試次數少於2次，則重試
+                if (retryCount < 2) {
+                    console.log('🔄 1秒後重試通訊檢查...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return this.checkCommunicationHealth(retryCount + 1);
+                }
+                
                 return false;
             }
         } catch (error) {
             console.log('❌ 通訊健康檢查失敗:', error.message);
+            
+            // 特定錯誤的處理
+            if (error.message.includes('Could not establish connection')) {
+                console.log('ℹ️ Content script 可能尚未載入或頁面不支援');
+            } else if (error.message.includes('Extension context invalidated')) {
+                console.log('ℹ️ 擴展上下文已失效，需要重新載入');
+            }
+            
+            // 如果是第一次失敗且重試次數少於2次，則重試
+            if (retryCount < 2 && !error.message.includes('Extension context invalidated')) {
+                console.log('🔄 1秒後重試通訊檢查...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return this.checkCommunicationHealth(retryCount + 1);
+            }
+            
             return false;
         }
     }
@@ -168,6 +230,13 @@ class PopupController {
         const isVisible = this.elements.buttonVisibilityToggle.checked;
         
         console.log('🔄 開始處理按鈕可見性切換:', isVisible);
+        console.log('📊 當前狀態:', {
+            currentTab: this.currentTab,
+            tabId: this.currentTab?.id,
+            tabUrl: this.currentTab?.url,
+            isSupported: this.currentTab ? this.isSupportedPage(this.currentTab.url) : false,
+            communicationHealthy: this.communicationHealthy
+        });
         
         try {
             // 步驟 1: 儲存狀態到 Chrome Storage
@@ -182,26 +251,57 @@ class PopupController {
             
             // 步驟 3: 發送訊息到當前分頁的 content script
             let currentTabSuccess = false;
+            let currentTabMessage = '';
+            
             if (this.currentTab && this.isSupportedPage(this.currentTab.url)) {
-                console.log('📤 發送訊息到當前分頁:', this.currentTab.id);
+                console.log('📤 準備發送訊息到當前分頁:', {
+                    tabId: this.currentTab.id,
+                    tabUrl: this.currentTab.url,
+                    tabTitle: this.currentTab.title,
+                    visible: isVisible
+                });
+                
                 try {
-                    const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+                    console.log('🚀 正在發送 TOGGLE_BUTTON_VISIBILITY 訊息...');
+                    const messagePayload = {
                         type: 'TOGGLE_BUTTON_VISIBILITY',
                         visible: isVisible,
                         timestamp: Date.now()
-                    });
+                    };
+                    console.log('📦 訊息內容:', messagePayload);
+                    
+                    const response = await Promise.race([
+                        chrome.tabs.sendMessage(this.currentTab.id, messagePayload),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('訊息發送超時')), 2000)
+                        )
+                    ]);
+                    
+                    console.log('📨 收到回應:', response);
                     
                     if (response && response.success) {
-                        console.log('✅ 當前分頁訊息發送成功');
-                        currentTabSuccess = true;
+                        console.log('✅ 當前分頁訊息發送成功:', response);
+                        currentTabSuccess = response.operationSuccess !== false;
+                        currentTabMessage = response.statusMessage || '成功';
                     } else {
                         console.log('⚠️ 當前分頁回應異常:', response);
+                        currentTabMessage = response?.error || '回應異常';
                     }
                 } catch (tabError) {
                     console.log('⚠️ 當前分頁訊息發送失敗:', tabError.message);
+                    currentTabMessage = tabError.message;
+                    
+                    // 如果是content script未載入的錯誤，這是正常情況
+                    if (tabError.message.includes('Could not establish connection') || 
+                        tabError.message.includes('Extension context invalidated')) {
+                        currentTabMessage = 'Content script未載入（正常）';
+                    } else if (tabError.message.includes('超時')) {
+                        currentTabMessage = 'Content script響應超時';
+                    }
                 }
             } else {
                 console.log('⚠️ 當前分頁不支援或未選中');
+                currentTabMessage = '分頁不支援';
             }
             
             // 步驟 4: 廣播到所有分頁
@@ -226,12 +326,16 @@ class PopupController {
     }
 
     async broadcastButtonVisibilityChange(visible) {
-        console.log('📡 開始廣播按鈕可見性變更...');
+        console.log('📡 開始廣播按鈕可見性變更...', { visible });
         
         try {
             // 獲取所有分頁
             const tabs = await chrome.tabs.query({});
             console.log(`📋 找到 ${tabs.length} 個分頁`);
+            
+            // 統計支援的分頁數量
+            const supportedTabs = tabs.filter(tab => this.isSupportedPage(tab.url));
+            console.log(`📊 支援翻譯的分頁: ${supportedTabs.length}/${tabs.length}`);
             
             let successCount = 0;
             let totalCount = 0;
@@ -431,10 +535,23 @@ class PopupController {
         
         if (this.communicationHealthy) {
             this.elements.statusIndicator.className = 'status-indicator';
-            this.elements.communicationStatus.querySelector('.status-text').textContent = '通訊正常';
+            const statusText = this.elements.communicationStatus.querySelector('.status-text');
+            if (statusText) {
+                statusText.textContent = '通訊正常';
+            }
         } else {
             this.elements.statusIndicator.className = 'status-indicator disconnected';
-            this.elements.communicationStatus.querySelector('.status-text').textContent = '通訊異常';
+            const statusText = this.elements.communicationStatus.querySelector('.status-text');
+            if (statusText) {
+                statusText.textContent = '通訊異常';
+            }
+            
+            // 提供更詳細的狀態信息
+            console.log('ℹ️ 通訊異常可能原因:');
+            console.log('  - Content script 尚未載入');
+            console.log('  - 當前頁面不支援翻譯功能');
+            console.log('  - 擴展需要重新載入');
+            console.log('  - 頁面正在載入中');
         }
     }
 
@@ -463,6 +580,40 @@ class PopupController {
             this.elements.translationStatus.style.color = '';
             this.updateUI();
         }, 2000);
+    }
+
+    /**
+     * 添加調試功能
+     */
+    addDebugFeatures() {
+        // 添加全域調試函數
+        window.testPopupCommunication = async () => {
+            console.log('🧪 測試 Popup 通訊:');
+            console.log('- 當前分頁:', this.currentTab);
+            
+            if (this.currentTab && this.isSupportedPage(this.currentTab.url)) {
+                try {
+                    console.log('🧪 發送測試 PING...');
+                    const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+                        type: 'PING',
+                        timestamp: Date.now()
+                    });
+                    console.log('🧪 測試回應:', response);
+                } catch (error) {
+                    console.log('🧪 測試失敗:', error);
+                }
+            } else {
+                console.log('🧪 當前分頁不支援測試');
+            }
+        };
+
+        // 添加手動切換測試
+        window.testButtonToggle = () => {
+            console.log('🧪 手動測試按鈕切換...');
+            this.handleButtonVisibilityToggle();
+        };
+
+        console.log('🧪 調試功能已添加: testPopupCommunication(), testButtonToggle()');
     }
 }
 
