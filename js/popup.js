@@ -454,8 +454,8 @@ class PopupController {
     isSupportedPage(url) {
         if (!url) return false;
         
-        // 支援 http 和 https 頁面
-        return url.startsWith('http://') || url.startsWith('https://');
+        // 支援 http、https 和 file 頁面
+        return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://');
     }
 
     startProgressMonitoring() {

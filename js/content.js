@@ -72,12 +72,19 @@ class WebTranslationContent {
         try {
             console.log('載入設定中...');
             
-            // 先測試背景服務通訊
-            console.log('測試背景服務通訊...');
+            // 檢測是否為本地文件環境
+            if (window.location.protocol === 'file:') {
+                console.log('檢測到本地文件環境，使用直接 storage 訪問');
+                this.settings = await this.loadSettingsDirectly();
+                console.log('本地文件設定載入成功:', this.settings);
+                return;
+            }
+            
+            // 網頁環境：使用背景服務通訊
+            console.log('網頁環境，使用背景服務通訊...');
             const pingResponse = await chrome.runtime.sendMessage({ type: 'PING' });
             console.log('PING 回應:', pingResponse);
             
-            // 統一使用背景服務的設定管理
             console.log('發送 GET_SETTINGS 請求...');
             const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
             console.log('GET_SETTINGS 回應:', response);
@@ -92,10 +99,34 @@ class WebTranslationContent {
             console.error('載入設定失敗:', error);
             console.error('錯誤詳情:', error.message, error.stack);
             
-            // 使用預設設定
-            this.settings = this.getDefaultSettings();
-            console.log('使用預設設定:', this.settings);
+            // Fallback: 嘗試直接載入設定
+            try {
+                console.log('嘗試直接載入設定作為 fallback...');
+                this.settings = await this.loadSettingsDirectly();
+                console.log('Fallback 設定載入成功:', this.settings);
+            } catch (fallbackError) {
+                console.error('Fallback 設定載入也失敗:', fallbackError);
+                // 使用預設設定
+                this.settings = this.getDefaultSettings();
+                console.log('使用預設設定:', this.settings);
+            }
         }
+    }
+
+    async loadSettingsDirectly() {
+        const result = await chrome.storage.sync.get([
+            'apiConfiguration',
+            'translationPreferences',
+            'usageStats'
+        ]);
+        
+        // 合併預設值
+        const defaultSettings = this.getDefaultSettings();
+        return {
+            apiConfiguration: { ...defaultSettings.apiConfiguration, ...result.apiConfiguration },
+            translationPreferences: { ...defaultSettings.translationPreferences, ...result.translationPreferences },
+            usageStats: { ...defaultSettings.usageStats, ...result.usageStats }
+        };
     }
 
     getDefaultSettings() {
