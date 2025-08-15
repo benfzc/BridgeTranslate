@@ -26,6 +26,7 @@
       "matches": ["<all_urls>"],
       "js": [
         "js/models.js",
+        "js/config-manager.js",
         "js/content-analyzer.js",
         "js/paragraph-translator.js",
         "js/translation-renderer.js",
@@ -52,6 +53,7 @@
       "resources": [
         "css/translation.css",
         "js/models.js",
+        "js/config-manager.js",
         "js/content-analyzer.js",
         "js/translation-renderer.js",
         "js/translation-button.js",

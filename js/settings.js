@@ -355,11 +355,18 @@ class SettingsController {
         try {
             console.log('🚀 開始驗證 API 金鑰:', provider, apiKey ? `${apiKey.substring(0, 10)}...` : 'empty');
             
-            const response = await chrome.runtime.sendMessage({
+            // 設定 10 秒超時
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('驗證超時')), 10000);
+            });
+            
+            const validationPromise = chrome.runtime.sendMessage({
                 type: 'VALIDATE_API_KEY',
                 provider: provider,
                 apiKey: apiKey
             });
+            
+            const response = await Promise.race([validationPromise, timeoutPromise]);
 
             console.log('📡 驗證回應:', response);
 
@@ -392,13 +399,18 @@ class SettingsController {
             
             let errorMsg = '❌ 驗證過程發生錯誤：' + error.message;
             
-            if (error.message.includes('Extension context invalidated')) {
+            if (error.message === '驗證超時') {
+                errorMsg = '⚠️ 驗證超時，但你可以嘗試直接儲存設定。如果翻譯功能正常工作，說明 API 金鑰是有效的。';
+                this.showValidationResult(errorMsg, 'warning');
+            } else if (error.message.includes('Extension context invalidated')) {
                 errorMsg += '\n\n💡 請重新載入擴展後再試';
+                this.showValidationResult(errorMsg, 'error');
             } else if (error.message.includes('network')) {
                 errorMsg += '\n\n💡 請檢查網路連接';
+                this.showValidationResult(errorMsg, 'error');
+            } else {
+                this.showValidationResult(errorMsg, 'error');
             }
-            
-            this.showValidationResult(errorMsg, 'error');
         } finally {
             this.elements.validateKey.disabled = false;
             this.elements.validateKey.textContent = '驗證金鑰';

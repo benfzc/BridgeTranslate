@@ -72,82 +72,29 @@ class WebTranslationContent {
         try {
             console.log('載入設定中...');
             
-            // 檢測是否為本地文件環境
-            if (window.location.protocol === 'file:') {
-                console.log('檢測到本地文件環境，使用直接 storage 訪問');
-                this.settings = await this.loadSettingsDirectly();
-                console.log('本地文件設定載入成功:', this.settings);
-                return;
-            }
+            // 直接使用統一的配置管理器
+            console.log('使用統一配置管理器載入設定...');
+            this.settings = await this.loadSettingsDirectly();
+            console.log('設定載入成功:', this.settings);
             
-            // 網頁環境：使用背景服務通訊
-            console.log('網頁環境，使用背景服務通訊...');
-            const pingResponse = await chrome.runtime.sendMessage({ type: 'PING' });
-            console.log('PING 回應:', pingResponse);
-            
-            console.log('發送 GET_SETTINGS 請求...');
-            const response = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
-            console.log('GET_SETTINGS 回應:', response);
-            
-            if (response.success) {
-                this.settings = response.data;
-                console.log('設定載入成功:', this.settings);
-            } else {
-                throw new Error(response.error || '載入設定失敗');
-            }
         } catch (error) {
             console.error('載入設定失敗:', error);
             console.error('錯誤詳情:', error.message, error.stack);
             
-            // Fallback: 嘗試直接載入設定
-            try {
-                console.log('嘗試直接載入設定作為 fallback...');
-                this.settings = await this.loadSettingsDirectly();
-                console.log('Fallback 設定載入成功:', this.settings);
-            } catch (fallbackError) {
-                console.error('Fallback 設定載入也失敗:', fallbackError);
-                // 使用預設設定
-                this.settings = this.getDefaultSettings();
-                console.log('使用預設設定:', this.settings);
-            }
+            // 使用預設設定
+            this.settings = this.getDefaultSettings();
+            console.log('使用預設設定:', this.settings);
         }
     }
 
     async loadSettingsDirectly() {
-        const result = await chrome.storage.sync.get([
-            'apiConfiguration',
-            'translationPreferences',
-            'usageStats'
-        ]);
-        
-        // 合併預設值
-        const defaultSettings = this.getDefaultSettings();
-        return {
-            apiConfiguration: { ...defaultSettings.apiConfiguration, ...result.apiConfiguration },
-            translationPreferences: { ...defaultSettings.translationPreferences, ...result.translationPreferences },
-            usageStats: { ...defaultSettings.usageStats, ...result.usageStats }
-        };
+        // 使用統一的配置管理器
+        return await configManager.loadSettings();
     }
 
     getDefaultSettings() {
-        return {
-            apiConfiguration: {
-                provider: 'google-gemini',
-                apiKey: '',
-                model: 'gemini-2.5-flash-lite',
-                maxTokensPerRequest: 4000
-            },
-            translationPreferences: {
-                targetLanguage: 'zh-TW',
-                translationPosition: 'below',
-                excludeSelectors: ['.ad', '.advertisement', '.sponsor']
-            },
-            usageStats: {
-                totalTranslations: 0,
-                tokensUsed: 0,
-                estimatedCost: 0
-            }
-        };
+        // 使用統一的配置管理器
+        return configManager.getDefaultSettings();
     }
 
     createComponents() {
@@ -265,34 +212,33 @@ class WebTranslationContent {
      * 創建 API 管理器代理
      */
     createAPIManagerProxy() {
-        return {
-            translate: async (text, options = {}) => {
-                try {
-                    const response = await chrome.runtime.sendMessage({
-                        type: 'TRANSLATE_TEXT',
-                        text: text,
-                        provider: this.settings?.apiConfiguration?.provider || 'google-gemini',
-                        options: {
-                            targetLanguage: options.targetLanguage || this.settings?.translationPreferences?.targetLanguage || 'zh-TW',
-                            ...options
-                        }
-                    });
-
-                    if (response.success) {
-                        return response.translation;
-                    } else {
-                        throw new Error(response.error || '翻譯請求失敗');
+        const translateMethod = async (text, options = {}) => {
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'TRANSLATE_TEXT',
+                    text: text,
+                    provider: this.settings?.apiConfiguration?.provider || 'google-gemini',
+                    options: {
+                        targetLanguage: options.targetLanguage || this.settings?.translationPreferences?.targetLanguage || 'zh-TW',
+                        ...options
                     }
-                } catch (error) {
-                    console.error('API 管理器代理錯誤:', error);
-                    throw error;
-                }
-            },
+                });
 
-            // 為了兼容性，保留舊的方法名
-            translateText: async (text, options = {}) => {
-                return this.translate(text, options);
+                if (response.success) {
+                    return response.translation;
+                } else {
+                    throw new Error(response.error || '翻譯請求失敗');
+                }
+            } catch (error) {
+                console.error('API 管理器代理錯誤:', error);
+                throw error;
             }
+        };
+
+        return {
+            translate: translateMethod,
+            // 為了兼容性，保留舊的方法名
+            translateText: translateMethod
         };
     }
 
@@ -1015,8 +961,8 @@ class WebTranslationContent {
      */
     async loadButtonVisibilityState() {
         try {
-            const result = await chrome.storage.local.get(['buttonVisibilityState']);
-            const isVisible = result.buttonVisibilityState !== undefined ? result.buttonVisibilityState : true;
+            // 使用統一的配置管理器
+            const isVisible = await configManager.loadButtonVisibilityState();
             
             console.log('🔘 載入按鈕可見性狀態:', isVisible);
             
