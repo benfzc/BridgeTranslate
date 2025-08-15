@@ -318,6 +318,11 @@ class ContentAnalyzer {
             return true;
         }
 
+        // 跳過程式碼區塊（使用增強的檢測邏輯）
+        if (this.isCodeBlockElement(node)) {
+            return true;
+        }
+
         // 跳過隱藏元素
         if (this.isElementHidden(element)) {
             return true;
@@ -375,6 +380,109 @@ class ContentAnalyzer {
             element.classList.contains(className) ||
             element.closest(`.${className}`)
         );
+    }
+
+    /**
+     * 檢查是否為程式碼區塊元素（增強版本）
+     * @param {Node} node - 文本節點
+     * @returns {boolean} 是否為程式碼區塊
+     */
+    isCodeBlockElement(node) {
+        const element = node.parentElement;
+        if (!element) return false;
+
+        // 遞迴檢查所有父元素，確保程式碼區塊內的所有子元素都被正確過濾
+        let currentElement = element;
+        let depth = 0;
+        const maxDepth = 10; // 限制檢查深度，避免無限循環
+
+        while (currentElement && currentElement !== document.body && depth < maxDepth) {
+            const tagName = currentElement.tagName.toLowerCase();
+
+            // 明確不需要翻譯的HTML標籤（擴展版本）
+            const skipTags = [
+                // 程式碼相關標籤
+                'code', 'pre', 'kbd', 'samp', 'var', 'tt',
+                // 腳本和樣式
+                'script', 'style', 'noscript', 'template',
+                // 表單元素
+                'button', 'input', 'select', 'textarea', 'option', 'optgroup',
+                // 圖像和媒體元素
+                'img', 'svg', 'canvas', 'picture', 'source',
+                'audio', 'video', 'track',
+                // 嵌入元素
+                'iframe', 'embed', 'object', 'param', 'applet',
+                // 元數據元素
+                'meta', 'link', 'base', 'title', 'head',
+                // 其他特殊元素
+                'map', 'area', 'colgroup', 'col'
+            ];
+
+            if (skipTags.includes(tagName)) {
+                console.log(`🚫 ContentAnalyzer 過濾特殊標籤: ${tagName}`, currentElement);
+                return true;
+            }
+
+            // 檢查程式碼相關的CSS類
+            if (currentElement.className) {
+                const className = currentElement.className.toLowerCase();
+                const codeKeywords = [
+                    'code', 'highlight', 'syntax', 'language-',
+                    'hljs', 'prettyprint', 'codehilite', 'prism',
+                    'lang-', 'brush-', 'sh_', 'dp-',
+                    'codeblock', 'code-block', 'sourceCode', 'source-code',
+                    'fenced-code', 'code-fence',
+                    'terminal', 'console', 'shell', 'bash', 'cmd',
+                    'monaco', 'ace-editor', 'codemirror'
+                ];
+                
+                if (codeKeywords.some(keyword => className.includes(keyword))) {
+                    console.log(`🚫 ContentAnalyzer 過濾程式碼類別: ${className}`, currentElement);
+                    return true;
+                }
+            }
+
+            // 檢查程式碼相關的 data 屬性
+            if (currentElement.dataset) {
+                const dataKeys = Object.keys(currentElement.dataset);
+                const codeDataKeys = [
+                    'language', 'lang', 'syntax', 'highlight',
+                    'code', 'brush', 'theme'
+                ];
+                
+                if (dataKeys.some(key => codeDataKeys.includes(key.toLowerCase()))) {
+                    console.log(`🚫 ContentAnalyzer 過濾程式碼 data 屬性: ${dataKeys}`, currentElement);
+                    return true;
+                }
+            }
+
+            // 檢查特定的 role 屬性
+            const role = currentElement.getAttribute('role');
+            if (role && ['code', 'img', 'button', 'textbox'].includes(role.toLowerCase())) {
+                console.log(`🚫 ContentAnalyzer 過濾特殊 role: ${role}`, currentElement);
+                return true;
+            }
+
+            // 檢查特殊的 contenteditable 屬性（編輯器內容）
+            if (currentElement.contentEditable === 'true') {
+                // 檢查是否為程式碼編輯器
+                const editorKeywords = ['editor', 'code', 'monaco', 'ace', 'codemirror'];
+                const hasEditorClass = currentElement.className && 
+                    editorKeywords.some(keyword => 
+                        currentElement.className.toLowerCase().includes(keyword)
+                    );
+                
+                if (hasEditorClass) {
+                    console.log(`🚫 ContentAnalyzer 過濾程式碼編輯器`, currentElement);
+                    return true;
+                }
+            }
+
+            currentElement = currentElement.parentElement;
+            depth++;
+        }
+
+        return false;
     }
 
     /**
