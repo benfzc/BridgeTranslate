@@ -406,7 +406,10 @@ class PopupController {
             const settings = await this.getSettings();
             console.log('Popup 檢查設定:', settings);
 
-            if (!settings?.apiConfiguration?.provider || !settings?.apiConfiguration?.apiKey) {
+            const provider = settings?.apiConfiguration?.provider;
+            const apiKey = settings?.apiConfiguration?.apiKeys?.[provider];
+            
+            if (!provider || !apiKey) {
                 console.log('設定檢查失敗，打開設定頁面');
                 this.showError('請先設定 AI 翻譯服務');
                 this.openSettings();

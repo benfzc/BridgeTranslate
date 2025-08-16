@@ -17,8 +17,14 @@ class ConfigManager {
         return {
             apiConfiguration: {
                 provider: 'google-gemini',
-                apiKey: '',
-                model: 'gemini-2.5-flash-lite',
+                apiKeys: {
+                    'google-gemini': '',
+                    'openai': ''
+                },
+                models: {
+                    'google-gemini': 'gemini-2.5-flash-lite',
+                    'openai': 'gpt-3.5-turbo'
+                },
                 maxTokensPerRequest: 4000
             },
             translationPreferences: {
@@ -49,8 +55,10 @@ class ConfigManager {
         return (
             typeof config.provider === 'string' &&
             validProviders.includes(config.provider) &&
-            typeof config.apiKey === 'string' &&
-            typeof config.model === 'string' &&
+            typeof config.apiKeys === 'object' &&
+            config.apiKeys !== null &&
+            typeof config.models === 'object' &&
+            config.models !== null &&
             typeof config.maxTokensPerRequest === 'number' &&
             config.maxTokensPerRequest > 0
         );

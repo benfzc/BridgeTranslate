@@ -219,17 +219,19 @@ class HybridBackgroundService {
             });
             
             // 如果有API配置，創建API客戶端
-            if (this.settings.apiConfiguration?.provider === 'google-gemini' && 
-                this.settings.apiConfiguration?.apiKey) {
-                
+            const provider = this.settings.apiConfiguration?.provider;
+            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider];
+            
+            if (provider === 'google-gemini' && apiKey) {
                 console.log('🔧 創建API客戶端...');
-                this.apiClient = new BasicGeminiClient(this.settings.apiConfiguration.apiKey);
+                this.apiClient = new BasicGeminiClient(apiKey);
                 console.log('✅ API客戶端創建完成');
             } else {
                 console.log('⚠️ 未創建API客戶端，原因:', {
-                    hasProvider: !!this.settings.apiConfiguration?.provider,
-                    provider: this.settings.apiConfiguration?.provider,
-                    hasApiKey: !!this.settings.apiConfiguration?.apiKey
+                    hasProvider: !!provider,
+                    provider: provider,
+                    hasApiKey: !!apiKey,
+                    apiKeyLength: apiKey?.length || 0
                 });
             }
             
@@ -285,10 +287,12 @@ class HybridBackgroundService {
                     await this.saveSettings(message.data);
                     
                     // 重新初始化API客戶端
-                    if (message.data.apiConfiguration?.provider === 'google-gemini' && 
-                        message.data.apiConfiguration?.apiKey) {
+                    const provider = message.data.apiConfiguration?.provider;
+                    const apiKey = message.data.apiConfiguration?.apiKeys?.[provider];
+                    
+                    if (provider === 'google-gemini' && apiKey) {
                         console.log('🔧 重新創建API客戶端...');
-                        this.apiClient = new BasicGeminiClient(message.data.apiConfiguration.apiKey);
+                        this.apiClient = new BasicGeminiClient(apiKey);
                         console.log('✅ API客戶端重新創建完成');
                     } else {
                         console.log('🗑️ 清除API客戶端');
@@ -362,19 +366,19 @@ class HybridBackgroundService {
             console.log('🔄 重新載入設定以確保API配置最新...');
             this.settings = await this.getSettings();
             
+            const provider = this.settings.apiConfiguration?.provider;
+            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider];
+            
             console.log('📋 當前設定:', {
-                provider: this.settings.apiConfiguration?.provider,
-                hasApiKey: !!this.settings.apiConfiguration?.apiKey,
-                apiKeyLength: this.settings.apiConfiguration?.apiKey?.length || 0
+                provider: provider,
+                hasApiKey: !!apiKey,
+                apiKeyLength: apiKey?.length || 0
             });
 
             // 如果沒有API客戶端但有API配置，創建API客戶端
-            if (!this.apiClient && 
-                this.settings.apiConfiguration?.provider === 'google-gemini' && 
-                this.settings.apiConfiguration?.apiKey) {
-                
+            if (!this.apiClient && provider === 'google-gemini' && apiKey) {
                 console.log('🔧 創建API客戶端...');
-                this.apiClient = new BasicGeminiClient(this.settings.apiConfiguration.apiKey);
+                this.apiClient = new BasicGeminiClient(apiKey);
                 console.log('✅ API客戶端創建完成');
             }
 
@@ -404,9 +408,9 @@ class HybridBackgroundService {
                 return result;
             } else {
                 // 檢查為什麼沒有API客戶端
-                const reason = !this.settings.apiConfiguration?.provider ? 
+                const reason = !provider ? 
                     '未選擇翻譯服務' : 
-                    !this.settings.apiConfiguration?.apiKey ? 
+                    !apiKey ? 
                     '未設定API金鑰' : 
                     provider !== 'google-gemini' ? 
                     `不支援的提供者: ${provider}` : 
@@ -533,8 +537,14 @@ class HybridBackgroundService {
         return {
             apiConfiguration: result.apiConfiguration || {
                 provider: '',
-                apiKey: '',
-                model: 'gemini-2.5-flash-lite',
+                apiKeys: {
+                    'google-gemini': '',
+                    'openai': ''
+                },
+                models: {
+                    'google-gemini': 'gemini-2.5-flash-lite',
+                    'openai': 'gpt-3.5-turbo'
+                },
                 maxTokensPerRequest: 4000
             },
             translationPreferences: result.translationPreferences || {
@@ -561,8 +571,14 @@ class HybridBackgroundService {
         const defaultSettings = {
             apiConfiguration: {
                 provider: '',
-                apiKey: '',
-                model: 'gemini-2.5-flash-lite',
+                apiKeys: {
+                    'google-gemini': '',
+                    'openai': ''
+                },
+                models: {
+                    'google-gemini': 'gemini-2.5-flash-lite',
+                    'openai': 'gpt-3.5-turbo'
+                },
                 maxTokensPerRequest: 4000
             },
             translationPreferences: {

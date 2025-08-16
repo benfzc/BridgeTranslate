@@ -168,9 +168,17 @@ class SettingsController {
     updateUI() {
         // 更新 API 設定
         const apiConfig = this.settings.apiConfiguration || {};
-        this.elements.apiProvider.value = apiConfig.provider || '';
-        this.elements.apiKey.value = apiConfig.apiKey || '';
-        this.elements.apiModel.value = apiConfig.model || 'gemini-2.5-flash-lite';
+        const provider = apiConfig.provider || '';
+        
+        this.elements.apiProvider.value = provider;
+        
+        // 載入當前提供者的已儲存值
+        const apiKey = apiConfig.apiKeys?.[provider] || '';
+        this.elements.apiKey.value = apiKey;
+        
+        const model = apiConfig.models?.[provider] || 'gemini-2.5-flash-lite';
+        this.elements.apiModel.value = model;
+        
         this.elements.maxTokens.value = apiConfig.maxTokensPerRequest || 4000;
         
         // 更新翻譯偏好
@@ -222,14 +230,37 @@ class SettingsController {
 
     handleProviderChange() {
         const provider = this.elements.apiProvider.value;
+        
+        console.log('🔄 提供者切換到:', provider);
+        console.log('📋 當前設定:', this.settings.apiConfiguration);
+        
         this.updateAPIKeyPlaceholder();
         this.updateAdvancedSettings();
         this.clearValidationResult();
         
-        // 如果選擇了新的提供商，清空 API 金鑰
-        if (provider !== this.settings.apiConfiguration?.provider) {
+        // 載入選擇的提供者的已儲存 API 金鑰和模型
+        if (provider) {
+            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider] || '';
+            const model = this.settings.apiConfiguration?.models?.[provider] || 
+                         this.getDefaultModelForProvider(provider);
+            
+            console.log(`🔑 載入 ${provider} 的 API key:`, apiKey ? `${apiKey.substring(0, 10)}...` : '(空)');
+            console.log(`🎯 載入 ${provider} 的模型:`, model);
+            
+            this.elements.apiKey.value = apiKey;
+            this.elements.apiModel.value = model;
+        } else {
             this.elements.apiKey.value = '';
         }
+    }
+    
+    getDefaultModelForProvider(provider) {
+        const defaultModels = {
+            'google-gemini': 'gemini-2.5-flash-lite',
+            'openai': 'gpt-3.5-turbo',
+            'claude': 'claude-3-sonnet'
+        };
+        return defaultModels[provider] || 'default';
     }
 
     updateAPIKeyPlaceholder() {
@@ -285,6 +316,12 @@ class SettingsController {
             optionElement.textContent = option.text;
             this.elements.apiModel.appendChild(optionElement);
         });
+        
+        // 設定當前選中的模型
+        const currentModel = this.settings.apiConfiguration?.models?.[provider] || options[0]?.value;
+        if (currentModel) {
+            this.elements.apiModel.value = currentModel;
+        }
     }
 
     toggleKeyVisibility() {
@@ -434,17 +471,30 @@ class SettingsController {
             .map(s => s.trim())
             .filter(s => s.length > 0);
 
+        const provider = this.elements.apiProvider.value;
+        const apiKey = this.elements.apiKey.value.trim();
+        const model = this.elements.apiModel.value;
+
+        // 準備新的配置結構
+        const currentApiKeys = this.settings.apiConfiguration?.apiKeys || {};
+        const currentModels = this.settings.apiConfiguration?.models || {};
+
+        // 更新當前提供者的 API key 和模型
+        if (provider) {
+            currentApiKeys[provider] = apiKey;
+            currentModels[provider] = model;
+        }
+
         const newSettings = {
             apiConfiguration: {
-                provider: this.elements.apiProvider.value,
-                apiKey: this.elements.apiKey.value.trim(),
-                model: this.elements.apiModel.value,
+                provider: provider,
+                apiKeys: currentApiKeys,
+                models: currentModels,
                 maxTokensPerRequest: parseInt(this.elements.maxTokens.value) || 4000
             },
             translationPreferences: {
                 targetLanguage: this.elements.targetLanguage.value,
                 translationPosition: this.elements.translationPosition.value,
-
                 autoTranslateVisible: this.elements.autoTranslateVisible.checked,
                 excludeSelectors: excludeSelectors
             },
@@ -452,7 +502,7 @@ class SettingsController {
         };
 
         // 基本驗證
-        if (newSettings.apiConfiguration.provider && !newSettings.apiConfiguration.apiKey) {
+        if (provider && !apiKey) {
             this.showError('請輸入 API 金鑰');
             return;
         }
@@ -466,6 +516,7 @@ class SettingsController {
 
             if (response.success) {
                 this.settings = newSettings;
+                console.log('✅ 設定儲存成功:', this.settings.apiConfiguration);
                 this.showSuccess('✅ 設定已儲存');
             } else {
                 this.showError('❌ 儲存設定失敗');
@@ -487,14 +538,19 @@ class SettingsController {
             const defaultSettings = {
                 apiConfiguration: {
                     provider: '',
-                    apiKey: '',
-                    model: 'gemini-2.5-flash-lite',
+                    apiKeys: {
+                        'google-gemini': '',
+                        'openai': ''
+                    },
+                    models: {
+                        'google-gemini': 'gemini-2.5-flash-lite',
+                        'openai': 'gpt-3.5-turbo'
+                    },
                     maxTokensPerRequest: 4000
                 },
                 translationPreferences: {
                     targetLanguage: 'zh-TW',
                     translationPosition: 'below',
-
                     autoTranslateVisible: false,
                     excludeSelectors: ['.ad', '.advertisement', '.sponsor']
                 },
@@ -564,8 +620,10 @@ class SettingsController {
         };
         
         // 移除敏感資訊
-        if (exportData.apiConfiguration) {
-            exportData.apiConfiguration.apiKey = '***已隱藏***';
+        if (exportData.apiConfiguration && exportData.apiConfiguration.apiKeys) {
+            Object.keys(exportData.apiConfiguration.apiKeys).forEach(provider => {
+                exportData.apiConfiguration.apiKeys[provider] = '***已隱藏***';
+            });
         }
         
         const dataStr = JSON.stringify(exportData, null, 2);
