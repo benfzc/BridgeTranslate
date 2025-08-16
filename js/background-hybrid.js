@@ -3,10 +3,10 @@
 
 // 內嵌的基本API客戶端
 class BasicGeminiClient {
-    constructor(apiKey) {
+    constructor(apiKey, model = 'gemini-2.5-flash-lite') {
         this.apiKey = apiKey;
         this.baseURL = 'https://generativelanguage.googleapis.com/v1beta';
-        this.model = 'gemini-2.5-flash-lite';
+        this.model = model;
     }
     
     async translateText(text, targetLanguage = 'zh-TW') {
@@ -224,8 +224,9 @@ class HybridBackgroundService {
             
             if (provider === 'google-gemini' && apiKey) {
                 console.log('🔧 創建API客戶端...');
-                this.apiClient = new BasicGeminiClient(apiKey);
-                console.log('✅ API客戶端創建完成');
+                const model = this.settings.apiConfiguration?.models?.[provider] || 'gemini-2.5-flash-lite';
+                this.apiClient = new BasicGeminiClient(apiKey, model);
+                console.log('✅ API客戶端創建完成，模型:', model);
             } else {
                 console.log('⚠️ 未創建API客戶端，原因:', {
                     hasProvider: !!provider,
@@ -292,8 +293,9 @@ class HybridBackgroundService {
                     
                     if (provider === 'google-gemini' && apiKey) {
                         console.log('🔧 重新創建API客戶端...');
-                        this.apiClient = new BasicGeminiClient(apiKey);
-                        console.log('✅ API客戶端重新創建完成');
+                        const model = message.data.apiConfiguration?.models?.[provider] || 'gemini-2.5-flash-lite';
+                        this.apiClient = new BasicGeminiClient(apiKey, model);
+                        console.log('✅ API客戶端重新創建完成，模型:', model);
                     } else {
                         console.log('🗑️ 清除API客戶端');
                         this.apiClient = null;
@@ -366,24 +368,33 @@ class HybridBackgroundService {
             console.log('🔄 重新載入設定以確保API配置最新...');
             this.settings = await this.getSettings();
             
-            const provider = this.settings.apiConfiguration?.provider;
-            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider];
+            // 使用傳入的 provider 參數，或者從設定中獲取
+            const currentProvider = provider || this.settings.apiConfiguration?.provider;
+            const apiKey = this.settings.apiConfiguration?.apiKeys?.[currentProvider];
             
             console.log('📋 當前設定:', {
-                provider: provider,
+                provider: currentProvider,
                 hasApiKey: !!apiKey,
                 apiKeyLength: apiKey?.length || 0
             });
 
-            // 如果沒有API客戶端但有API配置，創建API客戶端
-            if (!this.apiClient && provider === 'google-gemini' && apiKey) {
-                console.log('🔧 創建API客戶端...');
-                this.apiClient = new BasicGeminiClient(apiKey);
-                console.log('✅ API客戶端創建完成');
+            // 檢查是否需要創建或重新創建API客戶端
+            if (currentProvider === 'google-gemini' && apiKey) {
+                const model = this.settings.apiConfiguration?.models?.[currentProvider] || 'gemini-2.5-flash-lite';
+                
+                // 如果沒有客戶端，或者API key/模型已改變，則重新創建
+                if (!this.apiClient || 
+                    this.apiClient.apiKey !== apiKey || 
+                    this.apiClient.model !== model) {
+                    
+                    console.log('🔧 創建/重新創建API客戶端...');
+                    this.apiClient = new BasicGeminiClient(apiKey, model);
+                    console.log('✅ API客戶端創建完成，模型:', model);
+                }
             }
 
             // 如果有真實的API客戶端，使用它
-            if (this.apiClient && provider === 'google-gemini') {
+            if (this.apiClient && currentProvider === 'google-gemini') {
                 console.log('🚀 使用真實API進行翻譯');
                 
                 const targetLanguage = options.targetLanguage || 
@@ -408,12 +419,12 @@ class HybridBackgroundService {
                 return result;
             } else {
                 // 檢查為什麼沒有API客戶端
-                const reason = !provider ? 
+                const reason = !currentProvider ? 
                     '未選擇翻譯服務' : 
                     !apiKey ? 
                     '未設定API金鑰' : 
-                    provider !== 'google-gemini' ? 
-                    `不支援的提供者: ${provider}` : 
+                    currentProvider !== 'google-gemini' ? 
+                    `不支援的提供者: ${currentProvider}` : 
                     '未知原因';
                 
                 console.warn('⚠️ 無法使用真實API，原因:', reason);
@@ -421,8 +432,8 @@ class HybridBackgroundService {
                 // 降級到模擬翻譯
                 return {
                     originalText: text,
-                    translatedText: `[請先在設定中配置 ${provider || 'API'} 金鑰] ${text}`,
-                    provider: provider || 'mock',
+                    translatedText: `[請先在設定中配置 ${currentProvider || 'API'} 金鑰] ${text}`,
+                    provider: currentProvider || 'mock',
                     tokensUsed: Math.ceil(text.length / 4),
                     timestamp: Date.now()
                 };
@@ -485,7 +496,7 @@ class HybridBackgroundService {
                     return false;
                 }
                 
-                const client = new BasicGeminiClient(apiKey);
+                const client = new BasicGeminiClient(apiKey, 'gemini-2.5-flash-lite');
                 const isValid = await client.validateAPIKey();
                 console.log('API驗證結果:', isValid);
                 return isValid;
