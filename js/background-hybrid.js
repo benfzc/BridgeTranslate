@@ -197,6 +197,175 @@ ${text}
     }
 }
 
+// 內嵌的基本 OpenAI API 客戶端
+class BasicOpenAIClient {
+    constructor(apiKey, model = 'gpt-3.5-turbo') {
+        this.apiKey = apiKey;
+        this.baseURL = 'https://api.openai.com/v1';
+        this.model = model;
+    }
+    
+    async translateText(text, targetLanguage = 'zh-TW') {
+        if (!this.apiKey) {
+            throw new Error('API金鑰未設定');
+        }
+        
+        const prompt = this.buildTranslationPrompt(text, targetLanguage);
+        
+        try {
+            const response = await fetch(
+                `${this.baseURL}/chat/completions`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 1000
+                    })
+                }
+            );
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('OpenAI API 錯誤回應:', errorText);
+                throw new Error(`API請求失敗: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.choices || data.choices.length === 0) {
+                throw new Error('API回應格式錯誤');
+            }
+            
+            const translatedText = data.choices[0].message.content.trim();
+            
+            return {
+                originalText: text,
+                translatedText: translatedText,
+                provider: 'openai',
+                model: this.model,
+                tokensUsed: data.usage?.total_tokens || Math.ceil((text.length + translatedText.length) / 4),
+                timestamp: Date.now()
+            };
+            
+        } catch (error) {
+            console.error('OpenAI API翻譯失敗:', error);
+            throw error;
+        }
+    }
+    
+    buildTranslationPrompt(text, targetLanguage) {
+        const languageMap = {
+            'zh-TW': '繁體中文',
+            'zh-CN': '簡體中文',
+            'ja': '日文',
+            'ko': '韓文',
+            'en': '英文'
+        };
+        
+        const targetLangName = languageMap[targetLanguage] || targetLanguage;
+        
+        return `請將以下文本翻譯成${targetLangName}，要求：
+1. 保持原文的語氣和風格
+2. 確保翻譯自然流暢
+3. 保留專業術語的準確性
+4. 只返回翻譯結果，不要包含其他說明
+
+原文：
+${text}
+
+翻譯：`;
+    }
+    
+    async validateAPIKey() {
+        try {
+            console.log('🔍 開始驗證 OpenAI API 金鑰...', this.apiKey ? `${this.apiKey.substring(0, 10)}...` : 'empty');
+            
+            // 基本格式檢查
+            if (!this.apiKey || this.apiKey.trim().length === 0) {
+                console.error('❌ API金鑰為空');
+                return false;
+            }
+            
+            if (!this.apiKey.startsWith('sk-')) {
+                console.error('❌ OpenAI API金鑰格式不正確（應以 sk- 開頭）');
+                return false;
+            }
+            
+            if (this.apiKey.length < 40) {
+                console.error('❌ OpenAI API金鑰長度不足');
+                return false;
+            }
+            
+            // 測試 API 連接
+            console.log('💬 測試 OpenAI API 連接...');
+            const response = await fetch(
+                `${this.baseURL}/chat/completions`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: 'Hello'
+                            }
+                        ],
+                        max_tokens: 5
+                    })
+                }
+            );
+            
+            if (response.ok) {
+                console.log('✅ OpenAI API 驗證成功');
+                return true;
+            } else {
+                const errorText = await response.text();
+                console.error('❌ OpenAI API 驗證失敗');
+                console.error('📄 錯誤詳情:', errorText);
+                
+                // 解析錯誤訊息
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData.error) {
+                        console.error('🔍 具體錯誤:', errorData.error.message);
+                        
+                        if (errorData.error.code === 'invalid_api_key') {
+                            console.error('💡 問題: API 金鑰無效');
+                        } else if (errorData.error.code === 'insufficient_quota') {
+                            console.error('💡 問題: 配額不足');
+                        } else if (errorData.error.code === 'model_not_found') {
+                            console.error('💡 問題: 模型不存在或無權限');
+                        }
+                    }
+                } catch (parseError) {
+                    console.error('無法解析錯誤訊息:', parseError);
+                }
+                
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ OpenAI API 驗證網路錯誤:', error);
+            console.error('💡 可能的問題: 網路連接、防火牆或 CORS 設定');
+            return false;
+        }
+    }
+}
+
 class HybridBackgroundService {
     constructor() {
         this.isInitialized = false;
@@ -378,7 +547,7 @@ class HybridBackgroundService {
                 apiKeyLength: apiKey?.length || 0
             });
 
-            // 檢查是否需要創建或重新創建API客戶端
+            // 檢查是否需要創建或重新創建 Gemini API 客戶端
             if (currentProvider === 'google-gemini' && apiKey) {
                 const model = this.settings.apiConfiguration?.models?.[currentProvider] || 'gemini-2.5-flash-lite';
                 
@@ -387,15 +556,15 @@ class HybridBackgroundService {
                     this.apiClient.apiKey !== apiKey || 
                     this.apiClient.model !== model) {
                     
-                    console.log('🔧 創建/重新創建API客戶端...');
+                    console.log('🔧 創建/重新創建 Gemini API 客戶端...');
                     this.apiClient = new BasicGeminiClient(apiKey, model);
-                    console.log('✅ API客戶端創建完成，模型:', model);
+                    console.log('✅ Gemini API 客戶端創建完成，模型:', model);
                 }
             }
 
-            // 如果有真實的API客戶端，使用它
+            // 使用 Gemini API
             if (this.apiClient && currentProvider === 'google-gemini') {
-                console.log('🚀 使用真實API進行翻譯');
+                console.log('🚀 使用 Gemini API 進行翻譯');
                 
                 const targetLanguage = options.targetLanguage || 
                                      this.settings.translationPreferences?.targetLanguage || 
@@ -403,7 +572,7 @@ class HybridBackgroundService {
                 
                 const result = await this.apiClient.translateText(text, targetLanguage);
                 
-                console.log('✅ 翻譯成功:', {
+                console.log('✅ Gemini 翻譯成功:', {
                     originalLength: result.originalText.length,
                     translatedLength: result.translatedText.length,
                     tokensUsed: result.tokensUsed
@@ -414,6 +583,35 @@ class HybridBackgroundService {
                     translations: 1,
                     tokens: result.tokensUsed,
                     cost: result.tokensUsed * 0.001 / 1000 // 簡單的成本估算
+                });
+                
+                return result;
+            }
+            
+            // 使用 OpenAI API
+            if (currentProvider === 'openai' && apiKey) {
+                console.log('🚀 使用 OpenAI API 進行翻譯');
+                
+                const model = this.settings.apiConfiguration?.models?.[currentProvider] || 'gpt-3.5-turbo';
+                const openaiClient = new BasicOpenAIClient(apiKey, model);
+                
+                const targetLanguage = options.targetLanguage || 
+                                     this.settings.translationPreferences?.targetLanguage || 
+                                     'zh-TW';
+                
+                const result = await openaiClient.translateText(text, targetLanguage);
+                
+                console.log('✅ OpenAI 翻譯成功:', {
+                    originalLength: result.originalText.length,
+                    translatedLength: result.translatedText.length,
+                    tokensUsed: result.tokensUsed
+                });
+                
+                // 更新使用統計
+                await this.updateUsageStats({
+                    translations: 1,
+                    tokens: result.tokensUsed,
+                    cost: result.tokensUsed * 0.015 / 1000 // OpenAI 成本估算
                 });
                 
                 return result;
@@ -492,24 +690,45 @@ class HybridBackgroundService {
             try {
                 // 基本格式檢查
                 if (apiKey.length < 20) {
-                    console.log('API金鑰長度不足');
+                    console.log('Gemini API金鑰長度不足');
                     return false;
                 }
                 
                 const client = new BasicGeminiClient(apiKey, 'gemini-2.5-flash-lite');
                 const isValid = await client.validateAPIKey();
-                console.log('API驗證結果:', isValid);
+                console.log('Gemini API驗證結果:', isValid);
                 return isValid;
             } catch (error) {
-                console.error('API驗證異常:', error);
+                console.error('Gemini API驗證異常:', error);
+                return false;
+            }
+        }
+        
+        if (provider === 'openai') {
+            try {
+                // 基本格式檢查
+                if (!apiKey.startsWith('sk-')) {
+                    console.log('OpenAI API金鑰格式不正確');
+                    return false;
+                }
+                
+                if (apiKey.length < 40) {
+                    console.log('OpenAI API金鑰長度不足');
+                    return false;
+                }
+                
+                const client = new BasicOpenAIClient(apiKey, 'gpt-3.5-turbo');
+                const isValid = await client.validateAPIKey();
+                console.log('OpenAI API驗證結果:', isValid);
+                return isValid;
+            } catch (error) {
+                console.error('OpenAI API驗證異常:', error);
                 return false;
             }
         }
         
         // 其他提供者的基本驗證
         switch (provider) {
-            case 'openai':
-                return apiKey.startsWith('sk-');
             case 'claude':
                 return apiKey.startsWith('sk-ant-');
             default:

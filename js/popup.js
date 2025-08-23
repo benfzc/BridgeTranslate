@@ -420,7 +420,8 @@ class PopupController {
             if (!provider || !apiKey) {
                 console.log('❌ 設定檢查失敗，打開設定頁面');
                 console.log('失敗原因:', !provider ? '沒有提供者' : '沒有API key');
-                this.showError('請先設定 AI 翻譯服務');
+                const errorMessage = this.getProviderErrorMessage(provider);
+                this.showError(errorMessage);
                 this.openSettings();
                 return;
             }
@@ -566,6 +567,20 @@ class PopupController {
     openSettings() {
         chrome.runtime.openOptionsPage();
         window.close(); // 關閉 popup
+    }
+
+    getProviderErrorMessage(provider) {
+        if (!provider) {
+            return '請先在設定中選擇 AI 翻譯服務';
+        }
+        
+        const messages = {
+            'openai': '請先在設定中配置 OpenAI 金鑰',
+            'google-gemini': '請先在設定中配置 Google Gemini 金鑰',
+            'claude': '請先在設定中配置 Claude 金鑰'
+        };
+        
+        return messages[provider] || '請先在設定中配置 AI 翻譯服務';
     }
 
     showError(message) {
