@@ -81,8 +81,9 @@ class BasicGeminiClient {
         return `請將以下英文文本翻譯成${targetLangName}，要求：
 1. 保持原文的語氣和風格
 2. 確保翻譯自然流暢
-3. 保留專業術語的準確性
-4. 只返回翻譯結果，不要包含其他說明
+3. 保留專業術語為英文
+4. 原文有可能是與embedded system software有關文章段落
+5. 只返回翻譯結果，不要包含其他說明
 
 原文：
 ${text}
@@ -266,7 +267,7 @@ class BasicOpenAIClient {
     
     buildTranslationPrompt(text, targetLanguage) {
         const languageMap = {
-            'zh-TW': '繁體中文',
+            'zh-TW': '台灣慣用繁體中文',
             'zh-CN': '簡體中文',
             'ja': '日文',
             'ko': '韓文',
@@ -278,8 +279,9 @@ class BasicOpenAIClient {
         return `請將以下文本翻譯成${targetLangName}，要求：
 1. 保持原文的語氣和風格
 2. 確保翻譯自然流暢
-3. 保留專業術語的準確性
-4. 只返回翻譯結果，不要包含其他說明
+3. 保留專業術語為英文
+4. 原文有可能是與embedded system software有關文章段落
+5. 只返回翻譯結果，不要包含其他說明
 
 原文：
 ${text}
