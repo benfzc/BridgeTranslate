@@ -14,6 +14,9 @@ class RateLimitedTranslationQueue {
         this.tpmLimit = options.tpmLimit || 250000; // Tokens Per Minute
         this.rpdLimit = options.rpdLimit || 1000; // Requests Per Day
 
+        // API 管理器
+        this.apiManager = options.apiManager;
+
         // 隊列管理 - MVP 版本使用簡單陣列
         this.queue = [];
         this.processedSegments = new Set(); // 避免重複翻譯
@@ -333,28 +336,37 @@ class RateLimitedTranslationQueue {
     async translateSegment(queueItem) {
         const segment = queueItem.segment;
 
-        // 發送翻譯請求到背景腳本
-        const response = await chrome.runtime.sendMessage({
-            type: 'TRANSLATE_TEXT',
-            text: segment.text,
-            provider: 'google-gemini',
-            options: {
+        // 使用 API 管理器進行翻譯
+        let translationResult;
+        if (this.apiManager && this.apiManager.translate) {
+            // 使用傳入的 API 管理器（會自動使用正確的 provider）
+            translationResult = await this.apiManager.translate(segment.text, {
                 targetLanguage: 'zh-TW'
-            }
-        });
+            });
+        } else {
+            // 降級到直接發送消息（保持向後兼容）
+            const response = await chrome.runtime.sendMessage({
+                type: 'TRANSLATE_TEXT',
+                text: segment.text,
+                provider: 'google-gemini', // 降級時使用 Gemini
+                options: {
+                    targetLanguage: 'zh-TW'
+                }
+            });
 
-        if (!response.success) {
-            throw new Error(response.error || '翻譯請求失敗');
+            if (!response.success) {
+                throw new Error(response.error || '翻譯請求失敗');
+            }
+            
+            translationResult = response.translation;
         }
 
         // 記錄 API 使用量
-        const tokensUsed = this.estimateTokens(segment.text);
+        const tokensUsed = translationResult.tokensUsed || this.estimateTokens(segment.text);
         this.recordRequest(tokensUsed);
 
         // 立即渲染翻譯結果
         if (window.webTranslationContent && window.webTranslationContent.translationRenderer) {
-            // response.translation 是一個包含 translatedText 的對象
-            const translationResult = response.translation;
             // 確保 translatedText 是字串而不是物件
             const translatedText = typeof translationResult === 'string'
                 ? translationResult
