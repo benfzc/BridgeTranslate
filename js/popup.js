@@ -409,8 +409,17 @@ class PopupController {
             const provider = settings?.apiConfiguration?.provider;
             const apiKey = settings?.apiConfiguration?.apiKeys?.[provider];
             
+            console.log('🔍 配置檢查詳情:', {
+                provider: provider,
+                hasApiKeys: !!settings?.apiConfiguration?.apiKeys,
+                apiKeys: settings?.apiConfiguration?.apiKeys,
+                apiKey: apiKey ? `${apiKey.substring(0, 10)}...` : '(空)',
+                fullConfig: settings?.apiConfiguration
+            });
+            
             if (!provider || !apiKey) {
-                console.log('設定檢查失敗，打開設定頁面');
+                console.log('❌ 設定檢查失敗，打開設定頁面');
+                console.log('失敗原因:', !provider ? '沒有提供者' : '沒有API key');
                 this.showError('請先設定 AI 翻譯服務');
                 this.openSettings();
                 return;

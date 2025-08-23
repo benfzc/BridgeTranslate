@@ -212,15 +212,15 @@ class HybridBackgroundService {
             
             // 載入設定
             this.settings = await this.getSettings();
+            const provider = this.settings.apiConfiguration?.provider;
+            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider];
             console.log('📋 設定載入完成:', {
-                provider: this.settings.apiConfiguration?.provider,
-                hasApiKey: !!this.settings.apiConfiguration?.apiKey,
-                apiKeyLength: this.settings.apiConfiguration?.apiKey?.length || 0
+                provider: provider,
+                hasApiKey: !!apiKey,
+                apiKeyLength: apiKey?.length || 0
             });
             
             // 如果有API配置，創建API客戶端
-            const provider = this.settings.apiConfiguration?.provider;
-            const apiKey = this.settings.apiConfiguration?.apiKeys?.[provider];
             
             if (provider === 'google-gemini' && apiKey) {
                 console.log('🔧 創建API客戶端...');
@@ -280,16 +280,16 @@ class HybridBackgroundService {
                     break;
 
                 case 'SAVE_SETTINGS':
+                    const provider = message.data.apiConfiguration?.provider;
+                    const apiKey = message.data.apiConfiguration?.apiKeys?.[provider];
                     console.log('💾 保存設定:', {
-                        provider: message.data.apiConfiguration?.provider,
-                        hasApiKey: !!message.data.apiConfiguration?.apiKey
+                        provider: provider,
+                        hasApiKey: !!apiKey
                     });
                     
                     await this.saveSettings(message.data);
                     
                     // 重新初始化API客戶端
-                    const provider = message.data.apiConfiguration?.provider;
-                    const apiKey = message.data.apiConfiguration?.apiKeys?.[provider];
                     
                     if (provider === 'google-gemini' && apiKey) {
                         console.log('🔧 重新創建API客戶端...');

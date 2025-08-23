@@ -543,10 +543,14 @@ class WebTranslationContent {
         console.log('🚀 開始翻譯，當前設定:', this.settings);
 
         // 檢查是否已設定 API
-        if (!this.settings?.apiConfiguration?.provider || !this.settings?.apiConfiguration?.apiKey) {
+        const provider = this.settings?.apiConfiguration?.provider;
+        const apiKey = provider ? this.settings?.apiConfiguration?.apiKeys?.[provider] : null;
+        
+        if (!provider || !apiKey) {
             console.log('❌ API 設定檢查失敗:', {
-                provider: this.settings?.apiConfiguration?.provider,
-                hasApiKey: !!this.settings?.apiConfiguration?.apiKey
+                provider: provider,
+                hasApiKey: !!apiKey,
+                availableKeys: Object.keys(this.settings?.apiConfiguration?.apiKeys || {})
             });
 
             this.showError('請先在設定中配置 AI 翻譯服務');
