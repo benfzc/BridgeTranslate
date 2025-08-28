@@ -169,9 +169,67 @@ class ContentAnalyzer {
             return true;
         }
 
+        // 跳過程式碼區塊元素
+        if (this.isCodeBlockParagraph(element)) {
+            return true;
+        }
+
         // 跳過包含其他段落元素的元素（只處理葉節點段落）
         if (element.querySelector('p, div, article, section, h1, h2, h3, h4, h5, h6, li, dd, dt, blockquote, figcaption')) {
             return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 檢查段落元素是否為程式碼區塊
+     * @param {HTMLElement} element - 段落元素
+     * @returns {boolean} 是否為程式碼區塊
+     */
+    isCodeBlockParagraph(element) {
+        // 檢查元素本身是否為程式碼相關標籤
+        const tagName = element.tagName.toLowerCase();
+        if (['pre', 'code', 'kbd', 'samp', 'var', 'tt'].includes(tagName)) {
+            console.log(`🚫 段落級檢測: ${tagName} 標籤被識別為程式碼區塊`);
+            return true;
+        }
+
+        // 檢查是否包含程式碼相關的CSS類
+        if (element.className) {
+            const className = element.className.toLowerCase();
+            const codeKeywords = [
+                'highlight', 'syntax', 'language-', 'hljs', 'prettyprint', 
+                'codehilite', 'prism', 'lang-', 'brush-', 'sh_', 'dp-',
+                'codeblock', 'code-block', 'sourceCode', 'source-code'
+            ];
+            
+            if (codeKeywords.some(keyword => className.includes(keyword))) {
+                console.log(`🚫 段落級檢測: CSS 類別 "${className}" 被識別為程式碼區塊`);
+                return true;
+            }
+        }
+
+        // 檢查是否包含程式碼子元素
+        const codeElements = element.querySelectorAll('pre, code, kbd, samp, var, tt');
+        if (codeElements.length > 0) {
+            // 檢查程式碼元素是否有語言標識
+            for (const codeEl of codeElements) {
+                const hasLanguageClass = codeEl.className.toLowerCase().includes('language-') || 
+                                       codeEl.className.toLowerCase().includes('lang-');
+                const hasLanguageData = codeEl.dataset.lang || codeEl.dataset.language;
+                
+                if (hasLanguageClass || hasLanguageData) {
+                    console.log(`🚫 段落級檢測: 包含帶語言標識的程式碼元素 <${codeEl.tagName.toLowerCase()}>`);
+                    return true;
+                }
+                
+                // 檢查是否在 pre 標籤內的 code
+                if (codeEl.tagName.toLowerCase() === 'code' && codeEl.closest('pre')) {
+                    console.log(`🚫 段落級檢測: 包含 pre > code 結構`);
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -388,101 +446,108 @@ class ContentAnalyzer {
      * @returns {boolean} 是否為程式碼區塊
      */
     isCodeBlockElement(node) {
-        const element = node.parentElement;
-        if (!element) return false;
+        try {
+            const element = node.parentElement;
+            if (!element) return false;
 
-        // 遞迴檢查所有父元素，確保程式碼區塊內的所有子元素都被正確過濾
-        let currentElement = element;
-        let depth = 0;
-        const maxDepth = 10; // 限制檢查深度，避免無限循環
+            // 遞迴檢查所有父元素，確保程式碼區塊內的所有子元素都被正確過濾
+            let currentElement = element;
+            let depth = 0;
+            const maxDepth = 15; // 增加檢查深度
 
-        while (currentElement && currentElement !== document.body && depth < maxDepth) {
-            const tagName = currentElement.tagName.toLowerCase();
+            console.log(`🔍 開始檢測程式碼區塊，文本內容: "${node.textContent.trim().substring(0, 50)}..."`);
 
-            // 明確不需要翻譯的HTML標籤（擴展版本）
-            const skipTags = [
-                // 程式碼相關標籤
-                'code', 'pre', 'kbd', 'samp', 'var', 'tt',
-                // 腳本和樣式
-                'script', 'style', 'noscript', 'template',
-                // 表單元素
-                'button', 'input', 'select', 'textarea', 'option', 'optgroup',
-                // 圖像和媒體元素
-                'img', 'svg', 'canvas', 'picture', 'source',
-                'audio', 'video', 'track',
-                // 嵌入元素
-                'iframe', 'embed', 'object', 'param', 'applet',
-                // 元數據元素
-                'meta', 'link', 'base', 'title', 'head',
-                // 其他特殊元素
-                'map', 'area', 'colgroup', 'col'
-            ];
+            while (currentElement && currentElement !== document.body && depth < maxDepth) {
+                const tagName = currentElement.tagName.toLowerCase();
+                const dataLang = currentElement.dataset && currentElement.dataset.lang ? currentElement.dataset.lang : 'undefined';
+                console.log(`🔍 檢查元素 ${depth}: <${tagName}> class="${currentElement.className}" data-lang="${dataLang}"`);
 
-            if (skipTags.includes(tagName)) {
-                console.log(`🚫 ContentAnalyzer 過濾特殊標籤: ${tagName}`, currentElement);
-                return true;
-            }
+                // 優先檢查程式碼相關標籤
+                if (tagName === 'code') {
+                    // 檢查是否有程式語言標識
+                    const className = currentElement.className.toLowerCase();
+                    const hasLanguageClass = className.includes('language-') || className.includes('lang-');
+                    const hasLanguageData = currentElement.dataset.lang || currentElement.dataset.language;
+                    
+                    if (hasLanguageClass || hasLanguageData) {
+                        console.log(`🚫 ContentAnalyzer 檢測到程式碼區塊 (code + 語言標識): class="${className}", data-lang="${currentElement.dataset.lang}"`);
+                        return true;
+                    }
+                    
+                    // 檢查是否在 pre 標籤內
+                    if (currentElement.closest('pre')) {
+                        console.log(`🚫 ContentAnalyzer 檢測到程式碼區塊 (code 在 pre 內)`);
+                        return true;
+                    }
+                }
 
-            // 檢查程式碼相關的CSS類
-            if (currentElement.className) {
-                const className = currentElement.className.toLowerCase();
-                const codeKeywords = [
-                    'code', 'highlight', 'syntax', 'language-',
-                    'hljs', 'prettyprint', 'codehilite', 'prism',
-                    'lang-', 'brush-', 'sh_', 'dp-',
-                    'codeblock', 'code-block', 'sourceCode', 'source-code',
-                    'fenced-code', 'code-fence',
-                    'terminal', 'console', 'shell', 'bash', 'cmd',
-                    'monaco', 'ace-editor', 'codemirror'
+                // 檢查其他程式碼相關標籤
+                const codeTagPatterns = ['pre', 'kbd', 'samp', 'var', 'tt'];
+                if (codeTagPatterns.includes(tagName)) {
+                    console.log(`🚫 ContentAnalyzer 檢測到程式碼區塊 (${tagName} 標籤)`);
+                    return true;
+                }
+
+                // 檢查程式碼相關的CSS類
+                if (currentElement.className) {
+                    const className = currentElement.className.toLowerCase();
+                    const codeKeywords = [
+                        'highlight', 'syntax', 'language-',
+                        'hljs', 'prettyprint', 'codehilite', 'prism',
+                        'lang-', 'brush-', 'sh_', 'dp-',
+                        'codeblock', 'code-block', 'sourceCode', 'source-code',
+                        'fenced-code', 'code-fence',
+                        'terminal', 'console', 'shell', 'bash', 'cmd',
+                        'monaco', 'ace-editor', 'codemirror'
+                    ];
+                    
+                    if (codeKeywords.some(keyword => className.includes(keyword))) {
+                        console.log(`🚫 ContentAnalyzer 檢測到程式碼區塊 (CSS 類別): ${className}`);
+                        return true;
+                    }
+                }
+
+                // 檢查程式碼相關的 data 屬性
+                if (currentElement.dataset) {
+                    const dataKeys = Object.keys(currentElement.dataset);
+                    const codeDataKeys = [
+                        'language', 'lang', 'syntax', 'highlight',
+                        'code', 'brush', 'theme'
+                    ];
+                    
+                    if (dataKeys.some(key => codeDataKeys.includes(key.toLowerCase()))) {
+                        console.log(`🚫 ContentAnalyzer 檢測到程式碼區塊 (data 屬性): ${dataKeys.join(', ')}`);
+                        return true;
+                    }
+                }
+
+                // 檢查其他需要跳過的標籤
+                const skipTags = [
+                    'script', 'style', 'noscript', 'template',
+                    'button', 'input', 'select', 'textarea', 'option', 'optgroup',
+                    'img', 'svg', 'canvas', 'picture', 'source',
+                    'audio', 'video', 'track',
+                    'iframe', 'embed', 'object', 'param', 'applet',
+                    'meta', 'link', 'base', 'title', 'head',
+                    'map', 'area', 'colgroup', 'col'
                 ];
-                
-                if (codeKeywords.some(keyword => className.includes(keyword))) {
-                    console.log(`🚫 ContentAnalyzer 過濾程式碼類別: ${className}`, currentElement);
+
+                if (skipTags.includes(tagName)) {
+                    console.log(`🚫 ContentAnalyzer 檢測到需跳過的標籤: ${tagName}`);
                     return true;
                 }
+
+                currentElement = currentElement.parentElement;
+                depth++;
             }
 
-            // 檢查程式碼相關的 data 屬性
-            if (currentElement.dataset) {
-                const dataKeys = Object.keys(currentElement.dataset);
-                const codeDataKeys = [
-                    'language', 'lang', 'syntax', 'highlight',
-                    'code', 'brush', 'theme'
-                ];
-                
-                if (dataKeys.some(key => codeDataKeys.includes(key.toLowerCase()))) {
-                    console.log(`🚫 ContentAnalyzer 過濾程式碼 data 屬性: ${dataKeys}`, currentElement);
-                    return true;
-                }
-            }
+            console.log(`✅ 未檢測到程式碼區塊，允許翻譯`);
+            return false;
 
-            // 檢查特定的 role 屬性
-            const role = currentElement.getAttribute('role');
-            if (role && ['code', 'img', 'button', 'textbox'].includes(role.toLowerCase())) {
-                console.log(`🚫 ContentAnalyzer 過濾特殊 role: ${role}`, currentElement);
-                return true;
-            }
-
-            // 檢查特殊的 contenteditable 屬性（編輯器內容）
-            if (currentElement.contentEditable === 'true') {
-                // 檢查是否為程式碼編輯器
-                const editorKeywords = ['editor', 'code', 'monaco', 'ace', 'codemirror'];
-                const hasEditorClass = currentElement.className && 
-                    editorKeywords.some(keyword => 
-                        currentElement.className.toLowerCase().includes(keyword)
-                    );
-                
-                if (hasEditorClass) {
-                    console.log(`🚫 ContentAnalyzer 過濾程式碼編輯器`, currentElement);
-                    return true;
-                }
-            }
-
-            currentElement = currentElement.parentElement;
-            depth++;
+        } catch (error) {
+            console.warn('程式碼區塊檢測失敗:', error);
+            return false; // 安全降級
         }
-
-        return false;
     }
 
     /**
