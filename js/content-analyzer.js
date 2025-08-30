@@ -174,6 +174,18 @@ class ContentAnalyzer {
             return true;
         }
 
+        // 跳過超連結段落
+        if (element.tagName.toLowerCase() === 'a') {
+            const href = element.getAttribute('href') || '';
+            console.log(`🚫 段落級檢測: 超連結段落被跳過 href="${href}"`);
+            return true;
+        }
+
+        // 跳過主要內容為超連結的段落
+        if (this.isParagraphMainlyHyperlink(element)) {
+            return true;
+        }
+
         // 跳過包含其他段落元素的元素（只處理葉節點段落）
         if (element.querySelector('p, div, article, section, h1, h2, h3, h4, h5, h6, li, dd, dt, blockquote, figcaption')) {
             return true;
@@ -232,6 +244,58 @@ class ContentAnalyzer {
             }
         }
 
+        return false;
+    }
+
+    /**
+     * 檢查段落是否主要內容為超連結
+     * @param {HTMLElement} element - 段落元素
+     * @returns {boolean} 是否主要為超連結內容
+     */
+    isParagraphMainlyHyperlink(element) {
+        // 檢查段落是否包含超連結
+        const links = element.querySelectorAll('a');
+        if (links.length === 0) {
+            return false;
+        }
+
+        // 獲取段落的總文字內容
+        const totalText = element.textContent.trim();
+        if (totalText.length === 0) {
+            return false;
+        }
+
+        // 計算超連結文字的總長度
+        let linkTextLength = 0;
+        links.forEach(link => {
+            linkTextLength += link.textContent.trim().length;
+        });
+
+        // 計算超連結比例
+        const linkRatio = linkTextLength / totalText.length;
+        
+        console.log(`🔍 段落超連結分析: <${element.tagName.toLowerCase()}> class="${element.className}"`);
+        console.log(`   - 超連結數量: ${links.length}`);
+        console.log(`   - 總文字長度: ${totalText.length}`);
+        console.log(`   - 超連結文字長度: ${linkTextLength}`);
+        console.log(`   - 超連結比例: ${Math.round(linkRatio * 100)}%`);
+        console.log(`   - 文字內容: "${totalText.substring(0, 100)}..."`);
+        
+        // 更智能的超連結檢測邏輯
+        const shouldSkip = (
+            linkRatio > 0.6 ||                                    // 超連結文字佔 60% 以上
+            (links.length >= 5 && linkRatio > 0.4) ||            // 5個以上連結且佔 40% 以上
+            (links.length >= 3 && linkRatio > 0.3 && element.classList.contains('tags')) || // tags 類別特殊處理
+            (links.length >= 10) ||                              // 10個以上連結直接跳過
+            (element.classList.contains('tags') && links.length >= 2) // tags 類別且有2個以上連結
+        );
+        
+        if (shouldSkip) {
+            console.log(`🚫 段落級檢測: 段落主要內容為超連結 (${Math.round(linkRatio * 100)}% 是連結文字, ${links.length} 個連結, class="${element.className}")`);
+            return true;
+        }
+
+        console.log(`✅ 段落級檢測: 段落不是主要超連結內容`);
         return false;
     }
 
@@ -378,6 +442,11 @@ class ContentAnalyzer {
 
         // 跳過程式碼區塊（使用增強的檢測邏輯）
         if (this.isCodeBlockElement(node)) {
+            return true;
+        }
+
+        // 跳過超連結文字
+        if (this.isHyperlinkElement(node)) {
             return true;
         }
 
@@ -910,6 +979,43 @@ class ContentAnalyzer {
         });
 
         return stats;
+    }
+
+    /**
+     * 檢查文字節點是否位於超連結內
+     * @param {Node} node - 文字節點
+     * @returns {boolean} 是否為超連結文字
+     */
+    isHyperlinkElement(node) {
+        try {
+            let currentElement = node.parentElement;
+            let depth = 0;
+            const maxDepth = 10; // 限制檢查深度，避免效能問題
+
+            console.log(`🔍 開始檢測超連結，文本內容: "${node.textContent.trim().substring(0, 30)}..."`);
+
+            while (currentElement && currentElement !== document.body && depth < maxDepth) {
+                const tagName = currentElement.tagName.toLowerCase();
+                console.log(`🔍 檢查元素 ${depth}: <${tagName}> class="${currentElement.className}"`);
+
+                // 檢查是否為超連結標籤
+                if (tagName === 'a') {
+                    const href = currentElement.getAttribute('href') || '';
+                    console.log(`🚫 ContentAnalyzer 檢測到超連結文字: href="${href}", 文本="${node.textContent.trim().substring(0, 30)}..."`);
+                    return true;
+                }
+
+                currentElement = currentElement.parentElement;
+                depth++;
+            }
+
+            console.log(`✅ 未檢測到超連結，允許翻譯`);
+            return false;
+
+        } catch (error) {
+            console.warn('超連結檢測失敗:', error);
+            return false; // 安全降級：允許翻譯
+        }
     }
 }
 

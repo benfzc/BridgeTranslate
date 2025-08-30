@@ -1158,6 +1158,12 @@ try {
     console.log('🚀 開始創建 WebTranslationContent 實例...');
     window.webTranslationContent = new WebTranslationContent();
     console.log('✅ WebTranslationContent 實例創建成功');
+    
+    // 暴露 ContentAnalyzer 到全域以便調試
+    if (window.webTranslationContent.contentAnalyzer) {
+        window.ContentAnalyzer = window.webTranslationContent.contentAnalyzer.constructor;
+        console.log('✅ ContentAnalyzer 已暴露到全域');
+    }
 } catch (error) {
     console.error('❌ WebTranslationContent 實例創建失敗:', error);
     console.error('錯誤堆疊:', error.stack);
